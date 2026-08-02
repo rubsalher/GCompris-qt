@@ -17,8 +17,9 @@ import core 1.0
 
 QtObject {
     // margins (used also for rectangle corner's radius)
-    readonly property int baseMargins: 10 * ApplicationInfo.ratio
-    readonly property int halfMargins: 5 * ApplicationInfo.ratio
+    // enlarged for better touch-target separation on large screens (elderly-friendly build)
+    readonly property int baseMargins: 14 * ApplicationInfo.ratio
+    readonly property int halfMargins: 8 * ApplicationInfo.ratio
     readonly property int tinyMargins: Math.max(1, 2 * ApplicationInfo.ratio)
 
     // border sizes
@@ -30,9 +31,9 @@ QtObject {
     readonly property int thinnestBorder: Math.max(1, ApplicationInfo.ratio)
 
     // small button's height in menu config page
-    readonly property int smallButtonHeight: 35 * ApplicationInfo.ratio
+    readonly property int smallButtonHeight: 44 * ApplicationInfo.ratio
     // big button's size, like for OK button
-    readonly property int bigButtonHeight: 70 * ApplicationInfo.ratio
+    readonly property int bigButtonHeight: 88 * ApplicationInfo.ratio
 
     // border colors
     readonly property color whiteBorder: "#ffffff"
@@ -44,9 +45,13 @@ QtObject {
     readonly property color grayBorder: "#808080"
     readonly property color lightGrayBorder: "#c0c0c0"
 
-    readonly property color answerBorder: "#327CF4" // blue
-    readonly property color goodAnswerBorder: "#62BA62" // green
-    readonly property color badAnswerBorder: "#D94444" // red
+    readonly property color answerBorder: "#1F5C86" // blue
+    // NOTE: correct/incorrect feedback still relies on a green/red pair, which
+    // classic color-theory advice for elderly/color-vision-deficient users
+    // recommends avoiding; darkened+saturated here for max contrast, but a
+    // real fix needs a non-color cue too (icon/shape) — not done in this pass
+    readonly property color goodAnswerBorder: "#2E7D32" // green
+    readonly property color badAnswerBorder: "#C62828" // red
 
     // colors for text and its background
     readonly property color whiteText: "#ffffff"
@@ -58,9 +63,10 @@ QtObject {
     readonly property color contentColor: "#d2d2d2"
 
     readonly property color paperWhite: "#E8E8E8"
-    readonly property color lightBg: "#f2f2f2"
-    readonly property color lighterBg: "#f8f8f8"
-    readonly property color lightTransparentBg: "#AAffffff"
+    // sober, non-glaring neutral backgrounds (elderly-friendly build: avoid pure white)
+    readonly property color lightBg: "#EDEAE3"
+    readonly property color lighterBg: "#F2EFE9"
+    readonly property color lightTransparentBg: "#AAEDEAE3"
     readonly property color whiteBg: "#ffffff"
     readonly property color whiteBlueBg: "#f6fbfc"
     readonly property color whiteBlueTransparentBg: "#80f6fbfc"
@@ -68,28 +74,30 @@ QtObject {
     readonly property color darkTransparentBg: "#13373737"
     readonly property color midGrayBg: "#808080"
 
-    readonly property color highlightColor: "#3ac5f7"
-    readonly property color focusColor: "#99e1fc"
-    readonly property color selectedDarkBlue: "#3778d0"
+    // sober, solid, high-contrast accent (was a pastel cyan) — keep the same
+    // hue family for focusColor/selectedDarkBlue to avoid clashing accents
+    readonly property color highlightColor: "#1F5C86"
+    readonly property color focusColor: "#5B9BC4"
+    readonly property color selectedDarkBlue: "#154A6E"
 
     // color from gcompris logo used in some activities
     readonly property color gcOrange: "#e77936"
 
     // special button Bg colors
     readonly property color buttonColor: "#ffffff"
-    readonly property color goodAnswer: "#0099ff"
-    readonly property color badAnswer: "#ff6666"
+    readonly property color goodAnswer: "#0072B2"
+    readonly property color badAnswer: "#C62828"
     // special sliders colors
     readonly property color sliderHandle: "#ffffff"
-    readonly property color sliderPressed: "#3ac5f7"
-    readonly property color sliderFill: "#3ac5f7"
+    readonly property color sliderPressed: "#1F5C86"
+    readonly property color sliderFill: "#1F5C86"
     readonly property color sliderEmpty: "#585858"
     readonly property color sliderBorder: "#808080"
 
     // color for config panels
     readonly property color configBg: "#696da3"
-    // color for GCCreationHandler Bg and some activities
-    readonly property color lightBlueBg: "#abcdef"
+    // color for GCCreationHandler Bg and some activities (was a pastel light blue)
+    readonly property color lightBlueBg: "#B8CDE0"
 
     // grayed background behind pop-up dialogs
     readonly property color grayedBg: "#C080a0c0"

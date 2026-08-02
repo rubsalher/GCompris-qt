@@ -81,7 +81,7 @@ ApplicationSettings *ApplicationSettings::m_instance = nullptr;
 
 ApplicationSettings::ApplicationSettings(const QString &configPath, QObject *parent) :
     QObject(parent),
-    m_baseFontSizeMin(-7), m_baseFontSizeMax(7),
+    m_baseFontSizeMin(-7), m_baseFontSizeMax(12),
     m_fontLetterSpacingMin(0.0), m_fontLetterSpacingMax(8.0),
     m_config(configPath, QSettings::IniFormat)
 {
@@ -127,7 +127,7 @@ ApplicationSettings::ApplicationSettings(const QString &configPath, QObject *par
     m_filterLevelMax = m_config.value(FILTER_LEVEL_MAX, 6).toUInt();
     m_defaultCursor = m_config.value(DEFAULT_CURSOR, false).toBool();
     m_noCursor = m_config.value(NO_CURSOR, false).toBool();
-    m_baseFontSize = m_config.value(BASE_FONT_SIZE_KEY, 0).toInt();
+    m_baseFontSize = m_config.value(BASE_FONT_SIZE_KEY, 6).toInt();
 
     m_config.sync(); // make sure all defaults are written back
     m_config.endGroup();

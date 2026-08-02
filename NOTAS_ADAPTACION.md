@@ -158,3 +158,84 @@ menú principal debería mostrar únicamente las 6 actividades.
 Si prefieres no instalar el SDK completo, la forma más rápida de verificar
 el cambio sin compilar es leer `src/activities/activities.txt` directamente:
 solo 6 líneas quedan sin comentar.
+
+---
+
+## Fase 2 — Accesibilidad global (hecho, sin compilar — mismo motivo que Fase 1)
+
+**1. Tamaño de fuente** (`src/core/ApplicationSettings.cpp`):
+- `m_baseFontSizeMax`: `7` → `12` (más margen para escalar el texto desde
+  los ajustes de la app).
+- Valor por defecto de `baseFontSize` (primer arranque, sin config previa):
+  `0` → `6` (a mitad del nuevo rango máximo). Como
+  `font.pointSize = (baseFontSize + fontSize_del_texto) * fontRatio`
+  (`src/core/GCText.qml`), esto agranda **todo** el texto de la app de forma
+  proporcional desde el primer arranque, sin tocar cada actividad una por
+  una. El usuario sigue pudiendo subir más desde los ajustes (hasta el nuevo
+  máximo 12) o bajarlo si se pasa.
+- No he podido medir en pantalta real a cuántos "pt reales" equivale, porque
+  `fontRatio` depende de la resolución/DPI de la pantalla en tiempo de
+  ejecución (`ApplicationInfo.cpp`) y no he podido compilar ni ejecutar la
+  app en este entorno (ver Fase 1). Recomiendo, al probarlo en una máquina
+  con Qt instalado, comprobar visualmente si `baseFontSize: 6` es suficiente
+  o si conviene subirlo más (hay margen hasta 12).
+
+**2. Botones y separación** (`src/core/GCStyle.qml`, `src/core/Bar.qml`):
+- `GCStyle.baseMargins`: `10` → `14`, `halfMargins`: `5` → `8` (más aire
+  entre elementos en toda la app, ya que `Bar.buttonMargins` y muchos
+  paneles usan estos valores).
+- `GCStyle.smallButtonHeight`: `35` → `44`, `bigButtonHeight`: `70` → `88`
+  (botones tipo "OK" y de configuración, más grandes).
+- `Bar.buttonSize`: máximo de `78` → `104` px base (antes de aplicar el
+  ratio de pantalla) — los botones de inicio/ayuda/ajustes de la barra
+  inferior son ahora ~33% más grandes, con más separación entre ellos.
+
+**3. Paleta de colores** (`src/core/GCStyle.qml`, singleton compartido por
+toda la app):
+- Fondos: `lightBg` (`#f2f2f2`→`#EDEAE3`) y `lighterBg`
+  (`#f8f8f8`→`#F2EFE9`) pasan de gris frío casi blanco a un neutro cálido,
+  para evitar el deslumbramiento del blanco puro. `whiteBg` (`#ffffff`) se
+  ha dejado igual porque muchos botones/iconos dependen de un blanco
+  literal como base.
+- Acento principal: `highlightColor` (`#3ac5f7`, cian pastel tipo
+  Tux/infantil) → `#1F5C86` (azul sobrio y sólido). `focusColor` y
+  `selectedDarkBlue` recolocados en la misma familia de azules
+  (`#5B9BC4` / `#154A6E`) para no introducir un segundo acento que choque.
+  `sliderFill`/`sliderPressed` alineados al mismo azul.
+- `lightBlueBg` (`#abcdef`, pastel) → `#B8CDE0` (azul grisáceo, menos
+  saturado).
+- Contraste texto/fondo: `darkText` (`#373737`) sobre los nuevos fondos
+  claros da ~8:1, por encima del mínimo 4.5:1 pedido — no ha hecho falta
+  tocarlo.
+- Respuesta correcta/incorrecta: `goodAnswer` (antes `#0099ff` azul) se deja
+  en azul sólido `#0072B2`; `badAnswer` (antes `#ff6666` rojo pastel) →
+  `#C62828` (rojo sólido, **no** naranja — evité a propósito emparejarlo con
+  el nuevo azul de acento para no crear una combinación azul-naranja).
+  `goodAnswerBorder`/`badAnswerBorder` (verde/rojo, usados para marcar
+  acierto/error en el borde de las tarjetas) se han oscurecido y saturado
+  (`#2E7D32` / `#C62828`) para mejorar el contraste, **pero siguen siendo un
+  par verde/rojo** — el encargo pedía evitar justo esa combinación. No lo he
+  eliminado del todo porque verde=correcto/rojo=incorrecto es una
+  convención usada en todas las actividades y quitarla de verdad requiere
+  añadir una señal no cromática (icono/forma), no solo cambiar el color; lo
+  dejo anotado aquí como pendiente para una fase futura si se quiere resolver
+  a fondo.
+
+**4. Feedback de audio** — comprobado, no tocado (según lo pedido):
+- Existe un control de volumen global para efectos de sonido:
+  `ApplicationSettings.audioEffectsVolume`, por defecto `0.7` (70%),
+  ajustable ya desde los ajustes de la app. No hay un único "sonido de
+  clic" centralizado en `Bar.qml` — cada actividad reproduce sus propios
+  efectos (vía `GCSoundEffect.qml`) a ese volumen. Para saber si 70% es
+  suficientemente claro/alto hace falta probarlo de oído en la app
+  compilada — no evaluable solo leyendo código. Pendiente para cuando se
+  pueda ejecutar la app.
+
+### Nota sobre verificación
+
+Igual que en la Fase 1, estos cambios **no se han podido compilar ni ver en
+pantalla** en este entorno (faltan CMake/Qt6/compilador, ver Fase 1). Son
+cambios de valores/colores en 3 ficheros concretos
+(`ApplicationSettings.cpp`, `GCStyle.qml`, `Bar.qml`), de bajo riesgo de
+romper la compilación, pero **deben verificarse visualmente** en cuanto se
+pueda compilar en una máquina con el SDK de Qt instalado.
