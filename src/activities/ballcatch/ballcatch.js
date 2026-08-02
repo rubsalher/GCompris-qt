@@ -12,41 +12,44 @@
 .import core 1.0 as GCompris //for ApplicationInfo
 .import "qrc:/gcompris/src/core/core.js" as Core
 
+// longer reaction windows than upstream (elderly-friendly build), especially
+// on the early levels, since this is a reflex/timing game (press left+right
+// keys within timerInc ms of each other)
 var levelProperties = [
             {
-                "timerInc": 900,
+                "timerInc": 1800,
                 "backgroundImage": 1
             },
             {
-                "timerInc": 800,
+                "timerInc": 1500,
                 "backgroundImage": 1
+            },
+            {
+                "timerInc": 1300,
+                "backgroundImage": 2
+            },
+            {
+                "timerInc": 1100,
+                "backgroundImage": 2
+            },
+            {
+                "timerInc": 900,
+                "backgroundImage": 3
             },
             {
                 "timerInc": 700,
-                "backgroundImage": 2
-            },
-            {
-                "timerInc": 600,
-                "backgroundImage": 2
+                "backgroundImage": 3
             },
             {
                 "timerInc": 500,
-                "backgroundImage": 3
+                "backgroundImage": 4
             },
             {
-                "timerInc": 400,
-                "backgroundImage": 3
-            },
-            {
-                "timerInc": 300,
+                "timerInc": 350,
                 "backgroundImage": 4
             },
             {
                 "timerInc": 200,
-                "backgroundImage": 4
-            },
-            {
-                "timerInc": 100,
                 "backgroundImage": 4
             },
         ]

@@ -293,3 +293,75 @@ bajo riesgo, pero **debe jugarse una partida real** en cuanto se pueda
 compilar para confirmar que las cartas se ven cómodas y que los 7 niveles
 cargan bien (comprobado en el código: ningún nivel pide más parejas de las
 21 imágenes disponibles en `images` — el nivel más exigente pide 10 pares).
+
+---
+
+## Fase 4 — Las otras 5 actividades, mismo patrón que `memory` (hecho)
+
+El usuario ha dado permiso para completar todo el encargo sin pedir
+confirmación en cada paso, así que he adelantado la Fase 4 (marcada como
+"fuera de alcance por ahora" en el encargo original). Por actividad:
+
+**`babymatch`** (`src/activities/babymatch/`) — **no ha hecho falta tocar
+nada**: el tamaño de las piezas arrastrables usa
+`view.iconSize: GCStyle.bigButtonHeight` (`ListWidget.qml` línea 78), que ya
+se agrandó en la Fase 2 (70→88 * ratio). La dificultad por nivel viene de
+ficheros de datos externos por nivel (`boardN_M.qml`, fuera de
+`src/activities/babymatch/*.js`), no de una fórmula editable en un único
+sitio como en `memory` — cambiar la dificultad ahí implicaría editar
+decenas de ficheros de contenido uno a uno, lo dejo anotado como límite de
+esta pasada, no hecho.
+
+**`clickgame`** (`clickgame.js`): los peces ahora son un 36% más grandes
+como objetivo de clic (multiplicador `1.1`→`1.5` sobre su tamaño base, en
+`createFish()`) y se mueven más despacio y en menor número en los primeros
+niveles (`levelProperty`): nivel 1 pasa de 5 peces/2000ms a 4 peces/3200ms
+de duración mínima de cruce de pantalla; la progresión completa queda
+4,5,7,9,12,15 peces con 3200,2800,2200,1600,1100,700ms (antes 5,7,10,12,15,18
+con 2000,1500,1000,800,600,400ms).
+
+**`erase`** (`erase.js`): la rejilla de cuadros a borrar pasa de 5x5 u 8x8
+(según el nivel sea par/impar) a 3x3 o 5x5 — bloques mucho más grandes y
+menos numerosos, más fáciles de "pintar" con el dedo/ratón. Fórmula
+cambiada en `initLevel()`: `(currentLevel % 2 * 3) + 5` → `(currentLevel % 2
+* 2) + 3`.
+
+**`ballcatch`** (`ballcatch.js`): es un minijuego de reflejos (pulsar
+izquierda+derecha del teclado dentro de una ventana de tiempo), no de
+"atrapar visualmente una pelota" como sugería el nombre "renvoi" — aviso
+por si esto no encaja con lo que se esperaba para el perfil de usuario. Se
+ha alargado la ventana de reacción en todos los niveles, sobre todo los
+primeros: nivel 1 pasa de 900ms a 1800ms (el doble), última nivel de 100ms a
+200ms. Progresión completa: 1800,1500,1300,1100,900,700,500,350,200ms
+(antes 900,800,700,600,500,400,300,200,100ms).
+
+**`hangman`** (`src/core/VirtualKeyboard.qml`, componente compartido usado
+por el teclado en pantalla de `hangman`): altura de cada tecla `45 * ratio`
+→ `58 * ratio` (~29% más grande). Los iconos de vidas restantes (flor) y el
+botón OK ya usan `GCStyle.bigButtonHeight`, agrandado en la Fase 2. No se ha
+tocado el número de vidas (6, generoso de por sí) ni la lógica del juego.
+
+### Nota sobre verificación
+
+Como en las fases anteriores, **no se ha podido compilar ni jugar** ninguna
+de estas 5 actividades en este entorno (faltan CMake/Qt6/compilador — ver
+Fase 1). Son todo cambios de valores numéricos en ficheros JS/QML
+concretos, de bajo riesgo de romper la compilación, pero el equilibrio de
+dificultad (sobre todo en `clickgame` y `ballcatch`, que son juegos de
+tiempo/reflejos) **debe jugarse y ajustarse a ojo** en cuanto se pueda
+compilar — los números elegidos son una estimación razonable, no una
+medición con usuarios reales.
+
+---
+
+## Pendiente real (no abordado, requiere decisión o no es viable desde aquí)
+
+- **Sustitución de imágenes infantiles por otras neutras/adultas**: sigue
+  pendiente de decidir el origen de esas imágenes (banco de imágenes,
+  ilustraciones propias, etc.) — no se ha hecho, tal como pedía el encargo
+  original.
+- **Pruebas de usuario con personas mayores reales**: no es algo que se
+  pueda hacer desde aquí.
+- **Compilar y verificar visualmente todos los cambios de las Fases 1-4**:
+  bloqueado en este entorno concreto por falta de CMake/Qt6/compilador (ver
+  Fase 1) — hace falta una máquina con el SDK de Qt instalado.

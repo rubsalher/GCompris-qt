@@ -95,8 +95,10 @@ function initLevel() {
     items.activityBackground.alignBackground()
     createdBlocks = 0
     killedBlocks = 0
-    var nbx = Math.min((items.currentLevel % 2 * 3) + 5, items.activityBackground.width / (10 * GCompris.ApplicationInfo.ratio));
-    var nby = Math.min((items.currentLevel % 2 * 3) + 5, items.activityBackground.height / (10 * GCompris.ApplicationInfo.ratio));
+    // fewer, bigger erase blocks than upstream (elderly-friendly build): was
+    // (currentLevel % 2 * 3) + 5, i.e. a 5x5 or 8x8 grid
+    var nbx = Math.min((items.currentLevel % 2 * 2) + 3, items.activityBackground.width / (10 * GCompris.ApplicationInfo.ratio));
+    var nby = Math.min((items.currentLevel % 2 * 2) + 3, items.activityBackground.height / (10 * GCompris.ApplicationInfo.ratio));
     var data
 
     for(var x = 0;  x < nbx; ++x) {

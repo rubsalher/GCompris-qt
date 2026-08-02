@@ -179,30 +179,32 @@ var fishes = [
             },
         ]
 
+// slower fish and fewer of them per level than upstream (elderly-friendly build),
+// so there is more time to spot and click each one
 var levelProperty = [
             {
+                "nbFish": 4,
+                "minDuration": 3200
+            },
+            {
                 "nbFish": 5,
-                "minDuration": 2000
+                "minDuration": 2800
             },
             {
                 "nbFish": 7,
-                "minDuration": 1500
+                "minDuration": 2200
             },
             {
-                "nbFish": 10,
-                "minDuration": 1000
+                "nbFish": 9,
+                "minDuration": 1600
             },
             {
                 "nbFish": 12,
-                "minDuration": 800
+                "minDuration": 1100
             },
             {
                 "nbFish": 15,
-                "minDuration": 600
-            },
-            {
-                "nbFish": 18,
-                "minDuration": 400
+                "minDuration": 700
             }
         ]
 var currentImageId = 0
@@ -273,13 +275,14 @@ function createFish(minDuration) {
                     "bar": bar,
                     "y": (Math.random() * (maxY - minY + 1)) + minY,
                     "x": (Math.random() * (maxX + 1)),
-                    "width": fishSource.width * 1.1 * GCompris.ApplicationInfo.ratio,
-                    "height": fishSource.height * 1.1 * GCompris.ApplicationInfo.ratio,
+                    // enlarged click target (was *1.1) for elderly-friendly build
+                    "width": fishSource.width * 1.5 * GCompris.ApplicationInfo.ratio,
+                    "height": fishSource.height * 1.5 * GCompris.ApplicationInfo.ratio,
                     "source": "qrc:/gcompris/src/activities/clickgame/resource/" +
                               fishSource.imgName,
                     "frameCount": fishSource.nbFrame,
-                    "xSpeed": (activityBackground.width + fishSource.width * 1.1 * GCompris.ApplicationInfo.ratio) / (minDuration + Math.floor(Math.random() * 500)),
-                    "ySpeed": (activityBackground.height + fishSource.height * 1.1 * GCompris.ApplicationInfo.ratio) / (minDuration * 2 + Math.floor(Math.random() * 500))
+                    "xSpeed": (activityBackground.width + fishSource.width * 1.5 * GCompris.ApplicationInfo.ratio) / (minDuration + Math.floor(Math.random() * 500)),
+                    "ySpeed": (activityBackground.height + fishSource.height * 1.5 * GCompris.ApplicationInfo.ratio) / (minDuration * 2 + Math.floor(Math.random() * 500))
                 });
     if (fish === null) {
         // Error Handling

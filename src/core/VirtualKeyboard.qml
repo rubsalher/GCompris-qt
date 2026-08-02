@@ -170,7 +170,8 @@ Item {
      * Height of the keys in pixel.
      * Default: 45 * ApplicationInfo.ratio
      */
-    property int keyHeight: 45 * ApplicationInfo.ratio
+    // enlarged for easier tapping on large screens (elderly-friendly build)
+    property int keyHeight: 58 * ApplicationInfo.ratio
 
     /**
      * type:int
