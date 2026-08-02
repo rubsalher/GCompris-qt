@@ -239,3 +239,57 @@ cambios de valores/colores en 3 ficheros concretos
 (`ApplicationSettings.cpp`, `GCStyle.qml`, `Bar.qml`), de bajo riesgo de
 romper la compilación, pero **deben verificarse visualmente** en cuanto se
 pueda compilar en una máquina con el SDK de Qt instalado.
+
+---
+
+## Fase 3 — Actividad `memory` (piloto, hecho — sin compilar, mismo motivo)
+
+**Dónde está cada cosa** (`src/activities/memory/`):
+- **Tamaño de las cartas**: no es un valor fijo en píxeles — se calcula en
+  `MemoryCommon.qml` (`cardImageWidth`/`cardImageHeight`) a partir del
+  tamaño de celda de un `GridView` (`cellWidth = width/columns`,
+  `cellHeight = height/rows`). Es decir: **el tamaño de carta depende
+  directamente del número de columnas/filas del nivel**, no hay un número
+  mágico que agrandar aparte.
+- **Número de pares por nivel**: en `memorydataset.js`, array
+  `memory_cards`, cada nivel define `columns`/`rows` (nº de pares =
+  `columns * rows / 2`). Los valores originales eran 3, 4, 5, 6, 9 y 10
+  pares (6 niveles).
+- **Velocidad de animación de volteo**: en `CardItem.qml` — rotación de
+  volteo `NumberAnimation { duration: 750 }` (línea 134) y aparición de
+  carta `Behavior on opacity { NumberAnimation { duration: 1000 } }` (línea
+  164). Localizado pero **no modificado** en esta fase (el encargo pedía
+  solo localizarlo, no cambiarlo).
+- **Imágenes** (`src/activities/memory/resource/`): 26 ficheros `.svg` en
+  total + 1 `.wav` (sonido de volteo). De los 26 SVG, 21 son las imágenes
+  numeradas de animales (`01_cat.svg` a `21_frog.svg`) que forman las
+  parejas — cada una se referencia dos veces en el array `images` de
+  `memorydataset.js` para crear su propia pareja (no hay dos dibujos
+  distintos por pareja, es el mismo fichero repetido). Los otros 5 SVG son
+  piezas de interfaz: `backcard.svg` (dorso), `emptycard.svg`,
+  `background.svg`, `child.svg`/`tux.svg` (marcadores de puntuación). No se
+  han tocado ni sustituido en esta fase.
+
+**Cambio aplicado** (`memorydataset.js`, array `memory_cards`): como el
+tamaño de carta depende del grid, la única forma real de "agrandar las
+cartas" sin tocar la fórmula de layout es reducir columnas/filas en los
+primeros niveles. He:
+- Añadido un nivel 1 nuevo, muy fácil, de `2x2` (2 pares) — antes el
+  primer nivel ya empezaba en 3 pares.
+- Desplazado el resto de niveles un paso hacia abajo en dificultad: los
+  niveles que antes eran 3, 4, 5, 6, 9, 10 pares pasan a ser el nivel 2 a 7
+  de la nueva lista (7 niveles en total en vez de 6), manteniendo el último
+  nivel (10 pares) igual que antes para quien quiera más reto.
+- No he tocado `CardItem.qml` (animaciones) ni la fórmula de
+  `cardImageWidth`/`cardImageHeight` en `MemoryCommon.qml` — con menos
+  columnas/filas, esa fórmula ya calcula cartas más grandes automáticamente.
+
+### Nota sobre verificación
+
+No se ha podido compilar ni jugar la actividad en este entorno (mismo motivo
+que en Fases 1 y 2 — faltan CMake/Qt6/compilador). El cambio es de datos
+(nº de columnas/filas por nivel) en un único array de un fichero JS, de
+bajo riesgo, pero **debe jugarse una partida real** en cuanto se pueda
+compilar para confirmar que las cartas se ven cómodas y que los 7 niveles
+cargan bien (comprobado en el código: ningún nivel pide más parejas de las
+21 imágenes disponibles en `images` — el nivel más exigente pide 10 pares).

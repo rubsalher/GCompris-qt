@@ -31,33 +31,43 @@ var images = [
                 [url + '21_frog.svg', url + '21_frog.svg']
             ]
 
+// Levels start easier and ramp up more gradually than upstream (elderly-friendly
+// build): an extra very-easy first level was added (2x2), and each following
+// level keeps one fewer pair than before for longer, so cards stay bigger for
+// longer (card size is the grid area divided by columns/rows, so fewer
+// columns/rows directly means bigger cards).
 var memory_cards = [
             { // Level 1
-                columns: 3,
+                columns: 2,
                 rows: 2,
                 images: images
             },
             { // Level 2
-                columns: 4,
+                columns: 3,
                 rows: 2,
                 images: images
             },
             { // Level 3
-                columns: 5,
+                columns: 4,
                 rows: 2,
                 images: images
             },
             { // Level 4
+                columns: 5,
+                rows: 2,
+                images: images
+            },
+            { // Level 5
                 columns: 4,
                 rows: 3,
                 images: images
             },
-            { // Level 5
+            { // Level 6
                 columns: 6,
                 rows: 3,
                 images: images
             },
-            { // Level 6
+            { // Level 7
                 columns: 5,
                 rows: 4,
                 images: images
