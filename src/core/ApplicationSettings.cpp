@@ -117,7 +117,8 @@ ApplicationSettings::ApplicationSettings(const QString &configPath, QObject *par
 #endif
     m_isHomeButtonVisible = m_config.value(HOME_BUTTON_VISIBLE_KEY, true).toBool();
 
-    m_sectionVisible = m_config.value(SECTION_VISIBLE, true).toBool();
+    // default OFF: elderly-friendly build shows one flat activity list, no category tabs
+    m_sectionVisible = m_config.value(SECTION_VISIBLE, false).toBool();
     m_exitConfirmation = m_config.value(EXIT_CONFIRMATION, ApplicationInfo::getInstance()->isMobile() ? true : false).toBool();
 
     m_isAutomaticDownloadsEnabled = m_config.value(ENABLE_AUTOMATIC_DOWNLOADS,

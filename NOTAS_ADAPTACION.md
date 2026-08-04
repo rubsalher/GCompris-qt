@@ -354,6 +354,78 @@ medición con usuarios reales.
 
 ---
 
+---
+
+## Fase 5 — Primera compilación real y verificación en pantalla (hecho)
+
+Se consiguió instalar el SDK de Qt 6.11.1 + MinGW 13.1.0 + CMake + Ninja +
+OpenSSL (guiado paso a paso por el chat) y **compilar y ejecutar la app de
+verdad por primera vez**. Notas del proceso, por si hay que repetirlo:
+
+- `OPENSSL_ROOT_DIR`/`OPENSSL_INCLUDE_DIR` deben apuntar a una ruta **sin
+  espacios** (`C:\Program Files\OpenSSL-Win64` falla al compilar el `.rc` de
+  Windows) — se copiaron `libcrypto.lib`/`libssl.lib`/`include/` a
+  `C:\Users\Utente\openssl-mingw\`.
+- Con MinGW hace falta además marcar los módulos Qt Multimedia, Graphs y
+  Sensors por separado en el instalador (no vienen con el paquete base).
+- Se compiló con `-DBUILD_SERVER=OFF -DSKIP_TRANSLATIONS=ON` (el servidor de
+  profesores no hace falta; sin `gettext` instalado en Windows no se pueden
+  generar las traducciones, así que la build actual solo tiene inglés).
+- **Importante para futuras compilaciones**: cuando se añaden ficheros nuevos
+  a la carpeta `resource/` de una actividad (o se activa una actividad
+  nueva), a veces `cmake --build` no regenera el `.rcc` aunque el `.qrc`
+  se haya reescrito (una re-configuración automática de CMake a mitad de
+  build dejaba el `.qrc` más nuevo que el `.rcc` ya compilado, y Ninja no se
+  enteraba). Si after compilar algo no aparece en la app aunque el código
+  esté bien, borrar a mano el `.rcc` correspondiente en
+  `build/share/GCompris/rcc/` y volver a compilar suele arreglarlo.
+
+**Cambios de contenido visual, ya vistos en pantalla y confirmados por el
+usuario que funcionan:**
+
+- `memory`: las 12 imágenes de Openclipart sustituyeron a los animales/bebés
+  (ver selección acordada más arriba). Reverso de carta (`backcard.svg`) y
+  carta vacía (`emptycard.svg`) recoloreados al azul sobrio. Fondo de la
+  actividad (`background.svg`, antes una escena con Tux jugando a la pelota
+  entre pirámides y árboles) sustituido por un fondo liso en los tonos
+  cálidos del resto de la app. Avatares del marcador (`child.svg` un niño de
+  dibujos, `tux.svg` el pingüino) sustituidos por una insignia circular
+  simple (azul jugador 1, verde jugador 2).
+- **Menú principal**: por defecto ya no se navega por pestañas de categoría
+  (favoritos/ordenador/descubrimiento/ciencias/diversión/mates/puzles/
+  lectura/estrategia/buscar) — se ve una única pantalla plana con las 7
+  actividades. Cambio técnico: `ApplicationSettings::m_sectionVisible`
+  (`src/core/ApplicationSettings.cpp`) por defecto `false` en vez de `true`,
+  `Menu.qml`'s `currentTag` fijo a `"all"` en vez de derivarlo de la primera
+  sección, y `ActivityInfoTree::initialize()`
+  (`src/core/ActivityInfoTree.cpp`) filtra por `"all"` al arrancar en vez de
+  por `"favorite"` (que mostraba una lista vacía, no había favoritos
+  guardados). La barra de secciones sigue existiendo en el código (Ctrl+B/S
+  la reactivan) por si se quiere volver atrás, solo se cambió el valor por
+  defecto.
+- **Fondo del menú principal**: sustituido el paisaje de colinas verdes con
+  sol y nubes de dibujos animados por una ilustración de paisaje original
+  (montañas/colinas en capas, cielo en gradiente) en los mismos tonos
+  sobrios del resto de la app — el usuario pidió algo "tipo" una imagen de
+  stock con derechos de autor que compartió; no se usó esa imagen exacta
+  (es de pago/con copyright), se hizo una propia con el mismo espíritu.
+- **Torre de Hanoi añadida**: se descomentó `hanoi_real` en `activities.txt`
+  (la versión "The Tower of Hanoi" clásica, no la "Simplified Tower of
+  Hanoi" con menos discos — existe esa alternativa si se prefiere más
+  fácil). Van 7 actividades activas: `memory`, `babymatch`, `clickgame`,
+  `erase`, `hangman`, `ballcatch`, `hanoi_real`.
+
+### Pendiente de esta fase
+
+El usuario ha pedido revisar **cada actividad** una por una (fondo, HUD,
+imágenes) igual que se hizo con `memory` — de momento solo `memory` y el
+menú principal están tocados a fondo visualmente. `babymatch`, `clickgame`,
+`erase`, `hangman`, `ballcatch` y `hanoi_real` siguen con sus assets
+originales (solo se les tocó tamaño/velocidad/dificultad en la Fase 4, no
+imágenes/fondos/HUD).
+
+---
+
 ## Pendiente real (no abordado, requiere decisión o no es viable desde aquí)
 
 - **Sustitución de imágenes infantiles por otras neutras/adultas**: sigue

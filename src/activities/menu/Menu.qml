@@ -159,7 +159,8 @@ ActivityBase {
             tag: "search"
         }
     ]
-    property string currentTag: sections[0].tag
+    // elderly-friendly build: single flat activity list by default (no category tabs)
+    property string currentTag: "all"
     property var currentTagCategories: []
     property string currentCategory: ""
     /// @endcond

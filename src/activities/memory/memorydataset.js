@@ -7,28 +7,22 @@
 
 var url = "qrc:/gcompris/src/activities/memory/resource/"
 
+// Everyday objects in a consistent vintage-illustration style (11 of 12 by the
+// same artist, "j4p4n" on Openclipart, all CC0/public domain) instead of the
+// upstream cartoon animals/babies, as part of the elderly-friendly build.
 var images = [
-                [url + '01_cat.svg', url + '01_cat.svg'],
-                [url + '02_pig.svg', url + '02_pig.svg'],
-                [url + '03_bear.svg', url + '03_bear.svg'],
-                [url + '04_hippopotamus.svg', url + '04_hippopotamus.svg'],
-                [url + '05_penguin.svg', url + '05_penguin.svg'],
-                [url + '06_cow.svg', url + '06_cow.svg'],
-                [url + '07_sheep.svg', url + '07_sheep.svg'],
-                [url + '08_turtle.svg', url + '08_turtle.svg'],
-                [url + '09_panda.svg', url + '09_panda.svg'],
-                [url + '10_chicken.svg', url + '10_chicken.svg'],
-                [url + '11_redbird.svg', url + '11_redbird.svg'],
-                [url + '12_wolf.svg', url + '12_wolf.svg'],
-                [url + '13_monkey.svg', url + '13_monkey.svg'],
-                [url + '14_fox.svg', url + '14_fox.svg'],
-                [url + '15_bluebirds.svg', url + '15_bluebirds.svg'],
-                [url + '16_elephant.svg', url + '16_elephant.svg'],
-                [url + '17_lion.svg', url + '17_lion.svg'],
-                [url + '18_gnu.svg', url + '18_gnu.svg'],
-                [url + '19_bluebaby.svg', url + '19_bluebaby.svg'],
-                [url + '20_greenbaby.svg', url + '20_greenbaby.svg'],
-                [url + '21_frog.svg', url + '21_frog.svg']
+                [url + 'teapot.svg', url + 'teapot.svg'],
+                [url + 'rose.svg', url + 'rose.svg'],
+                [url + 'sunflower.svg', url + 'sunflower.svg'],
+                [url + 'glasses.svg', url + 'glasses.svg'],
+                [url + 'key.svg', url + 'key.svg'],
+                [url + 'phone.svg', url + 'phone.svg'],
+                [url + 'clock.svg', url + 'clock.svg'],
+                [url + 'watch.svg', url + 'watch.svg'],
+                [url + 'scissors.svg', url + 'scissors.svg'],
+                [url + 'tea.svg', url + 'tea.svg'],
+                [url + 'thimble.svg', url + 'thimble.svg'],
+                [url + 'umbrella.svg', url + 'umbrella.svg']
             ]
 
 // Levels start easier and ramp up more gradually than upstream (elderly-friendly

@@ -86,7 +86,7 @@ erase
 # guessnumber
 hangman
 # hanoi
-# hanoi_real
+hanoi_real
 # hexagon
 # imagename
 # instruments

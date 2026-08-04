@@ -354,7 +354,9 @@ void ActivityInfoTree::initialize(QQmlEngine *engine)
         Q_EMIT activitiesWithoutDatasets(activitiesWithoutActiveDatasets);
     }
 
-    filterByTag("favorite", "", false);
+    // elderly-friendly build: show every activity flat on startup instead of
+    // an empty "favorites" list (no favorites are set by default)
+    filterByTag("all", "", false);
     filterEnabledActivities(true);
 }
 
