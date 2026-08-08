@@ -418,11 +418,25 @@ usuario que funcionan:**
 ### Pendiente de esta fase
 
 El usuario ha pedido revisar **cada actividad** una por una (fondo, HUD,
-imágenes) igual que se hizo con `memory` — de momento solo `memory` y el
-menú principal están tocados a fondo visualmente. `babymatch`, `clickgame`,
-`erase`, `hangman`, `ballcatch` y `hanoi_real` siguen con sus assets
-originales (solo se les tocó tamaño/velocidad/dificultad en la Fase 4, no
-imágenes/fondos/HUD).
+imágenes) igual que se hizo con `memory`. Segunda pasada hecha:
+
+- **`hanoi_real`**: fondo (antes una escena de montañas con colores de
+  dibujos animados muy saturados) sustituido por un degradado sobrio.
+- **`hangman`**: mismo cambio de fondo.
+- **`ballcatch`**: los 4 fondos de playa (`beach1-4.svg`) sustituidos por
+  degradados sobrios; el Tux central (visible todo el rato durante la
+  partida, no solo al ganar) sustituido por la misma insignia sobria que
+  usamos en `memory`. `hand.svg` (las manos que animan el juego) no se ha
+  tocado — ya usa tonos piel/gris neutros, no hacía falta.
+- **`erase`, `clickgame`**: revisados y **no tocados** — ya usan fotografías
+  reales (animales/peces), no dibujos infantiles, así que encajan con el
+  criterio sin cambios.
+- **`babymatch`**: revisado — sus ~40 iconos (`resource/images/`) son en su
+  mayoría objetos cotidianos neutros (manzana, bici, casa, coche...), no
+  específicamente infantiles pese al nombre de la actividad. Solo 2 iconos
+  (`tuxhelico.svg`, `tuxplane.svg`, usados en un único tablero de 7) tienen a
+  Tux — peso visual bajo, no se ha tocado por ahora. No tiene fondo propio
+  (`resource/background.svg` no existe, usa fondos por tablero).
 
 ---
 
