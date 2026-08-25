@@ -7,8 +7,8 @@
 # algebra_minus
 # algebra_plus
 # algorithm
-# align4
-# align4_2players
+align4
+align4_2players
 # alphabet-sequence
 # analog_electricity
 # baby_keyboard
@@ -17,9 +17,9 @@
 # baby_wordprocessor
 babymatch
 # babyshapes
-# balancebox
-ballcatch
-# bargame
+balancebox
+# ballcatch
+bargame
 # bargame_2players
 # binary_bulb
 # braille_alphabets
@@ -28,30 +28,30 @@ ballcatch
 # calendar
 # canal_lock
 # categorization
-# checkers
-# checkers_2players
-# chess
-# chess_2players
-# chess_partyend
+checkers
+checkers_2players
+chess
+chess_2players
+chess_partyend
 # chronos
 # click_on_letter
 # click_on_letter_up
 # clickanddraw
-clickgame
+# clickgame
 # clockgame
 # color_mix
 # color_mix_light
-# colors
+colors
 # comparator
 # compass
-# crane
+crane
 # details
 # digital_electricity
-# drawing_wheels
+drawing_wheels
 # drawletters
 # drawnumbers
 # enumerate
-erase
+# erase
 # erase_2clic
 # erase_clic
 # explore_farm_animals
@@ -60,13 +60,13 @@ erase
 # explore_world_music
 # family
 # family_find_relative
-# fifteen
+fifteen
 # find_the_day
 # followline
 # football
 # fractions_create
 # fractions_find
-# frieze
+frieze
 # geo-country
 # geography
 # gletters
@@ -82,14 +82,14 @@ erase
 # graph-coloring
 # gravity
 # guess24
-# guesscount
+guesscount
 # guessnumber
 hangman
 # hanoi
 hanoi_real
 # hexagon
 # imagename
-# instruments
+instruments
 # keyboard_training
 # land_safe
 # lang
@@ -107,10 +107,10 @@ hanoi_real
 # louis-braille
 # magic-hat-minus
 # magic-hat-plus
-# maze
+maze
 # mazeinvisible
 # mazerelative
-# melody
+melody
 memory
 # memory-case-association
 # memory-case-association-tux
@@ -129,8 +129,8 @@ memory
 # memory-math-mult-div
 # memory-math-mult-div-tux
 # memory-math-mult-tux
-# memory-sound
-# memory-sound-tux
+memory-sound
+memory-sound-tux
 # memory-tux
 # memory-wordnumber
 # mining
@@ -153,25 +153,25 @@ memory
 # ordering_sentences
 # oware
 # oware_2players
-# paintings
+paintings
 # path_decoding
 # path_decoding_relative
 # path_encoding
 # path_encoding_relative
 # peg_solitaire
 # penalty
-# photo_hunter
-# piano_composition
+photo_hunter
+piano_composition
 # planegame
-# play_piano
+play_piano
 # play_rhythm
 # positions
 # programmingMaze
 # railroad
 # readingh
 # readingv
-# redraw
-# redraw_symmetrical
+redraw
+redraw_symmetrical
 # renewable_energy
 # reversecount
 # roman_numerals
@@ -179,23 +179,23 @@ memory
 # scalesboard_weight
 # scalesboard_weight_avoirdupois
 # share
-# simplepaint
-# sketch
+simplepaint
+sketch
 # smallnumbers
 # smallnumbers2
 # solar_system
 # submarine
-# sudoku
+sudoku
 # superbrain
-# tangram
+tangram
 # target
 # tens_complement_calculate
 # tens_complement_find
 # tens_complement_swap
 # tens_complement_use
-# tic_tac_toe
-# tic_tac_toe_2players
-# traffic
+tic_tac_toe
+tic_tac_toe_2players
+traffic
 # vertical_addition
 # vertical_subtraction
 # vertical_subtraction_compensation

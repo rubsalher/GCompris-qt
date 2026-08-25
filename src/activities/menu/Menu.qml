@@ -282,12 +282,47 @@ ActivityBase {
         Keys.onDownPressed: if(currentActiveGrid.currentItem && !loading.active) currentActiveGrid.moveCurrentIndexDown();
         Keys.onUpPressed: if(currentActiveGrid.currentItem && !loading.active) currentActiveGrid.moveCurrentIndexUp();
 
+        // elderly-friendly build: big clock/date banner where the category bar used to be,
+        // for time/day orientation instead of an empty or purely decorative strip
+        Rectangle {
+            id: clockBar
+            anchors.top: activityBackground.top
+            anchors.left: activityBackground.left
+            anchors.right: activityBackground.right
+            height: GCStyle.bigButtonHeight * 1.4
+            color: GCStyle.lightTransparentBg
+
+            property var now: new Date()
+            Timer {
+                interval: 1000
+                running: true
+                repeat: true
+                onTriggered: clockBar.now = new Date()
+            }
+
+            function capitalize(str: string): string {
+                return str.length ? str.charAt(0).toUpperCase() + str.slice(1) : str;
+            }
+
+            GCText {
+                anchors.centerIn: parent
+                fontSize: 22
+                font.weight: Font.DemiBold
+                color: GCStyle.darkText
+                text: clockBar.capitalize(Qt.formatDateTime(clockBar.now, "dddd d MMMM")) +
+                      "   •   " + Qt.formatDateTime(clockBar.now, "hh:mm")
+            }
+        }
+
         GridView {
             id: section
             model: activity.sections
-            x: ApplicationSettings.sectionVisible ? GCStyle.halfMargins : 0
-            y: ApplicationSettings.sectionVisible ? GCStyle.halfMargins : 0
-            visible: ApplicationSettings.sectionVisible
+            x: 0
+            y: 0
+            // elderly-friendly build: category bar (with animal-mascot icons) permanently
+            // hidden, not just default-off, so it can't reappear via a saved setting or
+            // the Ctrl+S/B shortcut
+            visible: false
             cellWidth: activityBackground.sectionCellWidth
             cellHeight: activityBackground.sectionCellWidth
             interactive: false
@@ -462,16 +497,16 @@ ActivityBase {
                         return searchBar.bottom
                     else if (activity.currentCategory != "")
                         return categoriesGrid.bottom
-                    else if(activityBackground.horizontal)
-                        return section.bottom
                     else
-                        return activityBackground.top
+                        // elderly-friendly build: category bar is permanently hidden,
+                        // grid starts right below the clock/date banner
+                        return clockBar.bottom
                 }
                 bottom: bar.top
                 right: activityBackground.right
                 margins: GCStyle.halfMargins
                 rightMargin: 0
-                topMargin: anchors.top == section.bottom ? 0 : GCStyle.halfMargins
+                topMargin: GCStyle.halfMargins
             }
             cellWidth: activityCellWidth
             cellHeight: activityCellHeight

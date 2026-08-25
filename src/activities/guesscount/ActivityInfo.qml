@@ -11,6 +11,10 @@
 import core 1.0
 
 ActivityInfo {
+    // elderly-friendly build: kept compiled (babymatch/Babymatch.qml reuses its
+    // background images) but hidden from the menu, not one of the chosen
+    // activities for this build
+    enabled: false
     name: "guesscount/Guesscount.qml"
     difficulty: 3
     icon: "guesscount/guesscount.svg"

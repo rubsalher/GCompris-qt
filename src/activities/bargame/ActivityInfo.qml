@@ -7,6 +7,10 @@
 import core 1.0
 
 ActivityInfo {
+  // elderly-friendly build: kept compiled (memory's score badges reuse its
+  // background frames) but hidden from the menu, not one of the chosen
+  // activities for this build
+  enabled: false
   name: "bargame/Bargame.qml"
   difficulty: 2
   icon: "bargame/bargame.svg"

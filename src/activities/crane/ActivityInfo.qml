@@ -12,6 +12,10 @@
 import core 1.0
 
 ActivityInfo {
+  // elderly-friendly build: kept compiled (frieze/Frieze.qml reuses its
+  // background) but hidden from the menu, not one of the chosen
+  // activities for this build
+  enabled: false
   name: "crane/Crane.qml"
   difficulty: 2
   icon: "crane/crane.svg"

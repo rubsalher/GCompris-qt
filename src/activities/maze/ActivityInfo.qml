@@ -7,6 +7,10 @@
 import core 1.0
 
 ActivityInfo {
+  // elderly-friendly build: kept compiled (balancebox/Balancebox.qml reuses
+  // its background) but hidden from the menu, not one of the chosen
+  // activities for this build
+  enabled: false
   name: "maze/Maze.qml"
   difficulty: 1
   icon: "maze/maze.svg"

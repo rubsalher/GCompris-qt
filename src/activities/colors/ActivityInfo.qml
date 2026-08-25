@@ -7,6 +7,10 @@
 import core 1.0
 
 ActivityInfo {
+  // elderly-friendly build: kept compiled (instruments/Instruments.qml reuses
+  // its QML components) but hidden from the menu, not one of the chosen
+  // activities for this build
+  enabled: false
   name: "colors/Colors.qml"
   difficulty: 1
   icon: "colors/colors.svg"

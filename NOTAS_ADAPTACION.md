@@ -451,3 +451,86 @@ imágenes) igual que se hizo con `memory`. Segunda pasada hecha:
 - **Compilar y verificar visualmente todos los cambios de las Fases 1-4**:
   bloqueado en este entorno concreto por falta de CMake/Qt6/compilador (ver
   Fase 1) — hace falta una máquina con el SDK de Qt instalado.
+
+---
+
+## Fase 6 — Ajustes de menú y arreglos de compilación tras probar en pantalla (hecho)
+
+Con la app ya compilándose y ejecutándose de verdad, fueron saliendo varios
+fallos solo visibles al jugar (no se detectan leyendo código). Quedan
+anotados aquí para no repetir la investigación si hace falta recompilar
+desde cero en otra máquina:
+
+**Menú principal:**
+- Barra de categorías (con iconos de animales: gato, pingüino, cerdo...)
+  ocultada de forma **permanente** (no solo por defecto) — `Menu.qml`,
+  el `GridView` `section` tiene `visible: false` fijo en vez de depender de
+  `ApplicationSettings.sectionVisible`, así ni el atajo Ctrl+S ni una
+  configuración guardada de una sesión anterior la puede volver a mostrar.
+- La rejilla de actividades (`activitiesGrid`) ahora arranca siempre en
+  `clockBar.bottom` en vez de depender de si la barra de secciones estaba
+  visible — si no, quedaba un hueco vacío arriba.
+- Añadido un **reloj y fecha** grandes arriba del todo (`clockBar` en
+  `Menu.qml`), con la idea de dar orientación temporal — usa
+  `Qt.formatDateTime` con el locale del sistema, se actualiza cada segundo
+  con un `Timer`.
+- Actividades quitadas del menú a petición del usuario tras probarlas:
+  `babymatch`, `ballcatch`, `clickgame`, `erase` (se habían añadido en la
+  Fase de "añadir todo el catálogo" pero al verlas jugando no encajaban).
+  Se añadieron también ~27 actividades más del catálogo completo de GCompris
+  (ajedrez, damas, sudoku, tangram, piano, dibujo...) sin tocar su contenido,
+  identificadas cruzando capturas de pantalla del usuario con el fichero de
+  traducción `poqm/es/gcompris_qt.po` para acertar el nombre interno exacto
+  de cada una.
+
+**Bugs de compilación encontrados jugando (no visibles leyendo código):**
+
+1. **Audio silencioso / no cargaba en absoluto** (`instruments` y otras
+   actividades con sonido): en Windows, `CMakeLists.txt` raíz fija
+   `COMPRESSED_AUDIO` a `mp3` por defecto, pero el repositorio solo trae los
+   sonidos en `.ogg` (los `.mp3` se generan/descargan aparte, paso que no
+   hacemos). Arreglado pasando `-DCOMPRESSED_AUDIO=ogg` al configurar con
+   `cmake` — con Qt6 en Windows el `.ogg` se reproduce bien.
+
+2. **`instruments` y `paintings` no abrían al pulsarlas** (sin ningún error
+   en el log): reutilizan internamente componentes QML de otras actividades
+   — `instruments` de `colors`, `paintings` (vía `babymatch`) de
+   `babymatch` — que no estaban activadas en `activities.txt`, así que esos
+   componentes no llegaban a compilarse ni registrarse como recurso.
+   Arreglado añadiendo esas actividades "donantes" a `activities.txt` pero
+   con `enabled: false` en su propio `ActivityInfo.qml`, para que se
+   compilen (satisfaciendo la dependencia) sin aparecer como icono propio en
+   el menú. Se hizo un barrido completo de todas las referencias
+   `activities/<nombre>/` en el código de las actividades activas para
+   encontrar todos los casos de una vez:
+   - `babymatch` → necesita `guesscount` (fondo) y `colors` es necesitado
+     por `instruments`, no por `babymatch`
+   - `balancebox` → necesita `maze` (fondo)
+   - `frieze` → necesita `crane` (fondo)
+   - `memory` → necesita `bargame` (fondo de las insignias de puntuación)
+   Todas estas "actividades donantes" están en `activities.txt` sin comentar
+   pero con `enabled: false`, mismo patrón para las cuatro.
+
+3. **`paintings` se abría pero con el fondo en negro y las piezas
+   invisibles**: el Qt 6.11.1 instalado no traía el plugin de `.webp`
+   (`qwebp.dll` no estaba en `Qt/6.11.1/mingw_64/plugins/imageformats/`),
+   y casi todas las imágenes de `paintings` son `.webp`. Es un módulo aparte
+   del instalador de Qt ("Qt Image Formats", en Additional Libraries, mismo
+   sitio que Multimedia/Graphs/Sensors) — instalarlo lo arregló sin tocar
+   ninguna imagen.
+
+**Nota para recompilar desde cero en otra máquina**: además de los pasos ya
+documentados en la Fase 1 (Qt 6.11.x MinGW, CMake, Ninja, OpenSSL-Win64
+copiado a una ruta sin espacios), hace falta instalar estos módulos extra
+de Qt vía Qt Maintenance Tool → Additional Libraries: **Multimedia**,
+**Graphs**, **Sensors**, **Image Formats**. Y al configurar con `cmake`,
+añadir `-DCOMPRESSED_AUDIO=ogg` a los flags ya usados.
+
+### Pendiente detectado pero no arreglado
+
+Al buscar todas las referencias cruzadas entre actividades, `simplepaint` y
+`sketch` referencian **muchísimas** otras actividades no activas (parece
+una galería opcional de fondos para dibujar, no una dependencia dura como
+las de arriba) — no se ha investigado a fondo ni tocado, de momento no han
+dado ningún fallo visible al jugar. Si `simplepaint` o `sketch` fallan al
+elegir cierto fondo, es la primera sospecha a revisar.

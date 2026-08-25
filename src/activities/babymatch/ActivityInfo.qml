@@ -10,6 +10,10 @@
 import core 1.0
 
 ActivityInfo {
+  // elderly-friendly build: kept compiled (paintings/Paintings.qml reuses its
+  // QML components) but hidden from the menu, since it was removed as a
+  // standalone activity for this build
+  enabled: false
   name: "babymatch/Babymatch.qml"
   difficulty: 1
   icon: "babymatch/babymatch.svg"
