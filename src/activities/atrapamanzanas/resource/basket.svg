@@ -1,0 +1,15 @@
+<svg width="260" height="160" viewBox="0 0 260 160" xmlns="http://www.w3.org/2000/svg">
+  <!-- Elderly-friendly build: new activity, hand-drawn to match the app's sober palette -->
+  <defs>
+    <linearGradient id="basketBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9C7B52"/>
+      <stop offset="1" stop-color="#7A5B3A"/>
+    </linearGradient>
+  </defs>
+  <path d="M30 55 L230 55 L200 145 Q130 158 60 145 Z" fill="url(#basketBody)"/>
+  <path d="M45 75 L215 75" stroke="#6E5334" stroke-width="6" stroke-linecap="round"/>
+  <path d="M52 100 L208 100" stroke="#6E5334" stroke-width="6" stroke-linecap="round"/>
+  <path d="M60 125 L200 125" stroke="#6E5334" stroke-width="6" stroke-linecap="round"/>
+  <path d="M25 40 Q130 15 235 40 L230 58 Q130 38 30 58 Z" fill="#B08F5E"/>
+  <path d="M70 42 Q90 -10 130 42" fill="none" stroke="#6E5334" stroke-width="8" stroke-linecap="round"/>
+</svg>

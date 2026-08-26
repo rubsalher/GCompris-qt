@@ -26,15 +26,12 @@ var fruitTypes = [
     { "imgName": "watermelon.svg", "width": 130, "height": 120 }
 ]
 
-// Slow and sparse at first (elderly-friendly build), ramping up gently.
+// Elderly-friendly build: levels removed at the user's request, only the
+// old level 6 (the fastest/hardest of the original 6) is kept as the
+// single, permanent difficulty.
 // doubleChance: probability that a spawn tick launches a second fruit
 // alongside the first one (0 = never, 1 = always).
 var levelProperty = [
-    { "spawnInterval": 3200, "target": 12, "doubleChance": 0.10 },
-    { "spawnInterval": 2600, "target": 16, "doubleChance": 0.15 },
-    { "spawnInterval": 2200, "target": 20, "doubleChance": 0.20 },
-    { "spawnInterval": 1800, "target": 24, "doubleChance": 0.25 },
-    { "spawnInterval": 1400, "target": 28, "doubleChance": 0.30 },
     { "spawnInterval": 1100, "target": 32, "doubleChance": 0.35 }
 ]
 

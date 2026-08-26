@@ -1,0 +1,19 @@
+<svg width="200" height="220" viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
+  <!-- Elderly-friendly build: new activity. Golden variant of mole.svg (same
+       shape/proportions on purpose, so it drops into the same clip window) —
+       worth 2 points instead of 1. -->
+  <ellipse cx="55" cy="205" rx="20" ry="16" fill="#F1DFA0"/>
+  <ellipse cx="145" cy="205" rx="20" ry="16" fill="#F1DFA0"/>
+  <circle cx="52" cy="66" r="16" fill="#C9A227"/>
+  <circle cx="148" cy="66" r="16" fill="#C9A227"/>
+  <circle cx="52" cy="66" r="8" fill="#E0C04B"/>
+  <circle cx="148" cy="66" r="8" fill="#E0C04B"/>
+  <ellipse cx="100" cy="130" rx="72" ry="78" fill="#C9A227"/>
+  <ellipse cx="100" cy="152" rx="44" ry="42" fill="#F1DFA0"/>
+  <circle cx="78" cy="112" r="8" fill="#4A3210"/>
+  <circle cx="122" cy="112" r="8" fill="#4A3210"/>
+  <circle cx="80" cy="109" r="2.5" fill="#FFFDF2"/>
+  <circle cx="124" cy="109" r="2.5" fill="#FFFDF2"/>
+  <ellipse cx="100" cy="148" rx="15" ry="11" fill="#8A6B1E"/>
+  <ellipse cx="100" cy="146" rx="6" ry="4" fill="#4A3210"/>
+</svg>

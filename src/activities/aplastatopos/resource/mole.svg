@@ -1,0 +1,17 @@
+<svg width="200" height="220" viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
+  <!-- Elderly-friendly build: new activity, hand-drawn to match the app's sober palette -->
+  <ellipse cx="55" cy="205" rx="20" ry="16" fill="#C9A876"/>
+  <ellipse cx="145" cy="205" rx="20" ry="16" fill="#C9A876"/>
+  <circle cx="52" cy="66" r="16" fill="#6B4E37"/>
+  <circle cx="148" cy="66" r="16" fill="#6B4E37"/>
+  <circle cx="52" cy="66" r="8" fill="#8A6B4E"/>
+  <circle cx="148" cy="66" r="8" fill="#8A6B4E"/>
+  <ellipse cx="100" cy="130" rx="72" ry="78" fill="#6B4E37"/>
+  <ellipse cx="100" cy="152" rx="44" ry="42" fill="#C9A876"/>
+  <circle cx="78" cy="112" r="8" fill="#2B1F16"/>
+  <circle cx="122" cy="112" r="8" fill="#2B1F16"/>
+  <circle cx="80" cy="109" r="2.5" fill="#F2EFE9"/>
+  <circle cx="124" cy="109" r="2.5" fill="#F2EFE9"/>
+  <ellipse cx="100" cy="148" rx="15" ry="11" fill="#4A3A2C"/>
+  <ellipse cx="100" cy="146" rx="6" ry="4" fill="#2B1F16"/>
+</svg>

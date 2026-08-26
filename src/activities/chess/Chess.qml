@@ -180,6 +180,16 @@ ActivityBase {
             anchors.top: instructionPanel.bottom
             anchors.topMargin: GCStyle.halfMargins
             anchors.bottom: parent.bottom
+            // Elderly-friendly build: back to the original bar.height * 1.2.
+            // The real reason the board looked "muy pequeño" in the first
+            // place was that the bar's own buttons had been enlarged a lot
+            // (Fase 2, buttonSize 78→104), which shrank layoutArea.height —
+            // not that this formula itself was too conservative. Now that the
+            // bar buttons are back down near their original size (→75, see
+            // Bar.qml), the original board proportions here are appropriate
+            // again; the various board-formula tweaks made in between (while
+            // the bar was still oversized) are reverted rather than stacked
+            // on top of a bar size that no longer exists.
             anchors.bottomMargin: ApplicationSettings.isBarHidden ? GCStyle.baseMargins : bar.height * 1.2
         }
 
@@ -328,8 +338,12 @@ ActivityBase {
                 name: "horizontalLayout"; when: !items.isVertical
                 PropertyChanges {
                     items {
-                        cellSize: Math.min((layoutArea.width  - GCStyle.baseMargins * 3 - bar.height) / 12,
-                                           (layoutArea.height - GCStyle.baseMargins) / 10)
+                        // Elderly-friendly build: small bump up from the
+                        // original 12/10 divisors, requested once the overall
+                        // proportions (bar size, board frame) were confirmed
+                        // good — a modest, deliberate increase this time.
+                        cellSize: Math.min((layoutArea.width  - GCStyle.baseMargins * 3 - bar.height) / 11.2,
+                                           (layoutArea.height - GCStyle.baseMargins) / 9.3)
                     }
                     controlsArea {
                         width: (layoutArea.width - boardBg.width) * 0.5
@@ -346,7 +360,13 @@ ActivityBase {
 
         Rectangle {
             id: boardBg
-            width: items.cellSize * 10 + GCStyle.baseMargins
+            // Elderly-friendly build: was cellSize * 10 (a full cell-width of
+            // dark frame on every side) — trimmed to just enough to fit the
+            // row/column coordinate labels drawn just outside the 8x8 board
+            // (they use font.pixelSize: cellSize * 0.5), so the actual board
+            // and pieces take up more of the frame instead of looking small
+            // inside a chunky border.
+            width: items.cellSize * 9.2 + GCStyle.baseMargins
             height: boardBg.width
             anchors.centerIn: layoutArea
             z: 08
@@ -440,7 +460,7 @@ ActivityBase {
 
             Rectangle {
                 id: boardBorder
-                width: items.cellSize * 10
+                width: items.cellSize * 9.2
                 height: boardBorder.width
                 anchors.centerIn: boardBg
                 z: -1

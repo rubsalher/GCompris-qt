@@ -1,0 +1,10 @@
+<svg width="140" height="150" viewBox="0 0 140 150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Elderly-friendly build: new activity, hand-drawn to match the app's sober palette -->
+  <path d="M50 30
+           C40 55 38 90 55 115
+           C70 135 95 138 112 125
+           C100 128 82 122 72 108
+           C58 90 58 60 66 35 Z" fill="#D9B23C"/>
+  <path d="M108 118 q10 4 14 14 q-12 1 -20 -6 Z" fill="#8A6B1E"/>
+  <path d="M55 115 C60 122 68 127 78 129" fill="none" stroke="#B8932E" stroke-width="3" stroke-linecap="round"/>
+</svg>

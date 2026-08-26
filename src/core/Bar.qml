@@ -54,8 +54,10 @@ Item {
      * type: int
      * Size of each button. For previous/next/levelText we calculate their size based on it.
      */
-    // enlarged touch target for the nav bar buttons (elderly-friendly build)
-    readonly property int buttonSize: Math.floor(Math.min(104 * ApplicationInfo.ratio, parent.width / (numberOfButtons + 1) - buttonMargins))
+    // enlarged touch target for the nav bar buttons (elderly-friendly build) —
+    // was 104, then 82, dialed back down further at the user's request (felt
+    // too big once seen on screen); still a bit bigger than the original 78
+    readonly property int buttonSize: Math.floor(Math.min(75 * ApplicationInfo.ratio, parent.width / (numberOfButtons + 1) - buttonMargins))
 
     /**
      * type:BarEnumContent

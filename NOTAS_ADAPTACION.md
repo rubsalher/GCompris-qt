@@ -621,3 +621,574 @@ para ver el estado exacto. Punto de partida rápido para volver a compilar:
 ver los flags de `cmake` usados en esta fase (`-DCOMPRESSED_AUDIO=ogg
 -DSKIP_TRANSLATIONS=OFF` además de los de la Fase 1), y añadir
 `C:\Users\Utente\gettext-tools\bin` al PATH.
+
+---
+
+## Fase 8 — Actividad nueva "Aplastatopos" (whack-a-mole) (hecho)
+
+Segunda actividad creada desde cero (mismo patrón que `fruitslice` en la
+Fase 7): un "topo-golpe" clásico pensado para ejercitar reflejos y
+atención, no tanto el movimiento de brazo por toda la pantalla (eso ya lo
+cubre `fruitslice`). Ficheros en `src/activities/aplastatopos/`
+(`ActivityInfo.qml`, `AplastaTopos.qml`, `HoleSlot.qml`, `HudBadge.qml`,
+`aplastatopos.js`, `CMakeLists.txt`, `resource/`). Añadida a
+`activities.txt` (sin comentar, orden alfabético entre
+`analog_electricity` y `baby_keyboard`).
+
+**Mecánica** (igual que se pidió, tras confirmar por búsqueda web que
+coincide con el diseño clásico del género): rejilla de 3x3 agujeros: los
+topos salen al azar en un agujero libre y se esconden solos si no se
+tocan a tiempo; tocarlos suma un punto y los esconde al momento.
+Cronómetro regresivo de 60s. La dificultad (intervalo entre apariciones,
+cuánto tiempo queda arriba cada topo, probabilidad de que salgan dos a la
+vez) aumenta progresivamente según avanza la partida — parámetros
+interpolados linealmente entre un valor inicial suave y uno final más
+exigente en `aplastatopos.js` (`lerp`/`difficultyFraction`), no hay
+"niveles" manuales de Bar (no tiene botones de nivel, solo ayuda/inicio).
+Panel superior con tres indicadores (puntos / récord / tiempo,
+`HudBadge.qml`, mismo estilo que `Score.qml` del core) y un botón grande
+"Iniciar"/"Volver a jugar" que aparece sobre un overlay semitransparente
+mientras no hay partida en curso.
+
+**Récord persistente**: usa `Qt.labs.settings` (`import Qt.labs.settings`,
+componente `Settings`), NO el mecanismo propio de `ApplicationSettings`
+de GCompris (ese es para ajustes globales de la app, no para datos de una
+actividad concreta). El plugin QML (`qmlsettingsplugin.dll`) ya viene
+incluido de serie con Qt6/qtdeclarative en `Qt/6.11.1/mingw_64/qml/Qt/labs/settings/`,
+no hace falta instalar nada aparte ni tocar `CMakeLists.txt` — se resuelve
+solo por ruta de import de QML en tiempo de ejecución. El récord se
+guarda aparte del `.conf` de GCompris (categoría `"aplastatopos"`, en el
+registro/backend nativo de `QSettings`, no en `GCompris.conf`).
+
+**Arte e imágenes**: a diferencia de `memory`/`fruitslice` (que usan
+Openclipart), aquí se preguntó al usuario y **prefirió que se dibujara
+todo a mano** en vez de buscar clipart — topo, agujero/montículo de
+tierra y fondo de hierba son SVG propios hechos a medida con la paleta
+sobria de `GCStyle.qml` (marrón tierra `#6B4E37`/`#7A5B3A`, verde salvia
+apagado `#9BAE86`/`#7E9470` para la hierba, nada de verde/marrón
+saturado tipo dibujos animados). El "topo saliendo del agujero" se
+consigue con un `Item` con `clip: true` (`moleClip` en `HoleSlot.qml`)
+que enmarca solo la parte superior del topo (cara/orejas/hocico,
+`revealFraction: 0.78` del alto del dibujo) dejando la barriga/patas
+literalmente recortadas "dentro" del agujero — no hay que dibujar un
+sprite aparte de "medio topo".
+
+**Sonido**: mismo patrón que `fruitslice` — sintetizado con un script de
+Python (`gen_whack_sound.py`, no incluido en el repo, era temporal en el
+scratchpad) en vez de buscar un `.wav` real, para evitar de entrada el
+problema ya conocido de `GCSoundEffect` con `.mp3`/`.ogg` silenciosos.
+Es un "thump" grave con un poco de ruido de impacto y un pequeño barrido
+de tono, ~220ms.
+
+**Gotcha nuevo — verificación visual imposible en este entorno concreto**:
+a diferencia de fases anteriores (que sí se pudieron ver jugando), en
+esta sesión el entorno de automatización (herramienta de control de
+escritorio) resultó estar controlando una sesión/máquina distinta de
+aquella donde corre de verdad la build compilada — se pudo lanzar el
+`.exe`, moverlo, comprobar con la API de Windows que su ventana existe y
+tiene tamaño/posición normales, pero nunca apareció en ninguna captura de
+pantalla tomada por esa herramienta (ni con `--window`, ni con
+`--software-renderer`, ni forzando foco a mano vía `SetForegroundWindow`/
+`AttachThreadInput`). Una captura de pantalla *real* tomada con
+`System.Drawing.Graphics.CopyFromScreen` (PowerShell) confirmó que en la
+pantalla física de verdad la ventana de la propia app de chat ocupa toda
+la pantalla y no se puede apartar mediante llamadas de foco programáticas
+(está fijada delante). **Conclusión práctica**: en este tipo de entorno,
+para una actividad nueva no basta con "lanzar y hacer capturas" — hay que
+verificar por otras vías (compilación limpia, `--list-activities` para
+confirmar que se registra, `--launch <nombre-actividad>` +
+`--window --software-renderer` redirigiendo stdout/stderr a fichero para
+comprobar que no hay errores/avisos de QML al cargar la actividad
+concreta) y pedirle al usuario que la juegue él mismo para el visto bueno
+final de sensaciones de juego (velocidad, tamaño de agujeros, etc.) — iría
+en línea con el patrón ya conocido de "no se ha podido compilar/ver en
+este entorno" de las Fases 1-4, solo que ahora el bloqueo es de
+visualización, no de compilación.
+
+**Corrección importante (tras el playtest real del usuario): `--launch` NO
+basta para verificar una actividad nueva.** Lo de arriba resultó ser
+insuficiente en la práctica — la actividad compilaba, pasaba
+`--list-activities` y arrancaba sin fallos con `--launch aplastatopos`,
+pero **al entrar desde el menú de verdad (tocando el icono) no dejaba
+entrar**, sin ningún error visible al principio. La causa real, encontrada
+tras bastante ida y vuelta:
+
+1. **`--launch <actividad>` usa un camino de carga distinto al menú real.**
+   El menú (`Menu.qml`, función `selectCurrentItem()`) carga la actividad
+   con `Loader { asynchronous: true }` + `activityLoader.setSource(url,
+   {...propiedades iniciales...})`, es decir, RESOLUCIÓN DE TIPOS QML EN
+   TIEMPO DE EJECUCIÓN sobre un recurso `.rcc`. `--launch` en cambio no
+   pasa por ese `Loader` en absoluto, así que un fallo específico de esa
+   vía (como un tipo QML que no se resuelve) **no aparece nunca** al
+   probar con `--launch`, por muy limpio que salga.
+2. **El fallo real**: `HammerEffect.qml` (añadido en esta misma fase,
+   *después* de la configuración inicial de `cmake`) daba
+   `"HammerEffect is not a type"` únicamente por el camino del `Loader`
+   del menú. Motivo: al añadir un fichero `.qml` **nuevo** a una actividad,
+   `cmake --build` (recompilar sin más) no es suficiente — la lista de
+   tipos QML del módulo/recurso de esa actividad se fija en el paso de
+   **configuración** de CMake (`cmake -G Ninja ...`), no en el de build.
+   Sin volver a configurar, el `.qml` nuevo se copia igualmente al `.rcc`
+   (por eso `--launch` no se quejaba de "fichero no encontrado"), pero no
+   queda registrado como tipo disponible para la resolución dinámica del
+   `Loader`, y solo ese camino se queja. **Es la misma familia de gotcha ya
+   documentada en la Fase 6 sobre `.rcc` desactualizados, pero aplicada a
+   ficheros `.qml` nuevos, no solo a `resource/*`.**
+3. **Regla práctica a partir de ahora**: cualquier vez que se **añada un
+   fichero `.qml` nuevo** a una actividad (no solo la primera vez que se
+   crea la actividad entera), hay que volver a ejecutar el `cmake -G
+   Ninja ...` completo de configuración (no solo `cmake --build .`) antes
+   de dar la actividad por verificada, y la comprobación real tiene que
+   incluir **entrar desde el menú de verdad** (o, si no se puede jugar a
+   mano, forzar ese mismo camino de carga), no solo `--launch`.
+
+**Truco para ver los mensajes reales de consola (`console.log`/`qWarning`,
+errores de QML) en esta build**: por defecto esta compilación está en modo
+`CMAKE_BUILD_TYPE=Release` (es el valor por defecto si no se especifica
+`-D` al configurar) y, al ser `GCompris.exe` una app de tipo "ventana"
+sin consola propia, **Qt no escribe nada a stdout/stderr aunque se
+redirija la salida** — ni siquiera `console.warn()`. Hay que forzarlo con
+la variable de entorno `QT_FORCE_STDERR_LOGGING=1` antes de lanzar el
+`.exe`; con eso sí aparecen todos los `qWarning`/errores de QML/
+`console.log` al redirigir a fichero (`GCompris.exe > log.txt 2>&1`). Sin
+esta variable, un `.bat`/consola con la salida redirigida puede parecer
+"no hay ningún error" cuando en realidad Qt simplemente no está
+escribiendo nada.
+
+**Cuidado con dejar flags de depuración puestos**: durante esta
+investigación se usó temporalmente `--window --software-renderer` (para
+sortear un problema de visualización específico del entorno de
+automatización de esa sesión, no del PC real del usuario) y esto se quedó
+sin querer grabado en `GCompris.conf` (`renderer=software`) y en un acceso
+directo del escritorio — causó que la pantalla completa dejara de
+funcionar bien en el uso normal del usuario. **Si se usa
+`--software-renderer` o `--window` para depurar, revertir
+`[Admin] renderer=` a `direct3d11` en
+`%LOCALAPPDATA%\GCompris\GCompris.conf` y quitar esos flags de cualquier
+acceso directo antes de darlo por terminado** — no son necesarios para el
+uso normal, solo para diagnosticar en un entorno con problemas de pantalla.
+
+**Truco útil descubierto para lanzar el `.exe` de desarrollo sin tocar el
+PATH cada vez**: ejecutar `windeployqt.exe --qmldir <ruta a src/>
+GCompris.exe` desde `build/bin` copia automáticamente todas las DLL de
+Qt/MinGW y los plugins QML (incluido `Qt/labs/settings`) junto al
+ejecutable, de modo que a partir de ahí `GCompris.exe` se puede lanzar con
+doble clic o acceso directo sin depender de que el PATH tenga
+`Qt/6.11.1/mingw_64/bin` — cómodo para que el usuario pruebe la build sin
+usar la terminal. No hace falta repetirlo en cada recompilación, solo
+si `build/bin` se borra o se crea de cero. Flags de `GCompris.exe` útiles
+para depurar sin interfaz gráfica: `--list-activities` (lista los nombres
+internos de actividades registradas), `--launch <nombre>` (arranca
+directo en una actividad, saltándose el menú), `--window` (fuerza modo
+ventana en vez de pantalla completa) y `--software-renderer` (evita el
+renderizador Direct3D11, útil si el entorno de pantalla da problemas con
+render acelerado).
+
+### Ajustes tras el primer playtest del usuario (hecho)
+
+- **Bug importante arreglado — no se podía golpear ningún topo**: el
+  `MultiPointTouchArea` que detecta el toque estaba declarado como *hijo*
+  de `holesContainer` en vez de hermano. Como se añadió el último, quedaba
+  por encima en el orden de pintado, así que `holesContainer.childAt(x,y)`
+  siempre se encontraba a sí mismo (el propio área de toque) en vez del
+  `HoleSlot` que había debajo, y `hole.whack` nunca se llegaba a llamar.
+  Arreglado moviendo el `MultiPointTouchArea` a hermano de `holesContainer`
+  (mismo patrón exacto que usan `fruitslice`/`erase`: el área de toque
+  vive fuera del contenedor sobre el que se hace `childAt()`, nunca
+  dentro). **Apunte para futuras actividades nuevas**: si un
+  `childAt()`+`MultiPointTouchArea` no detecta nada, lo primero a mirar es
+  si el área de toque es hijo del mismo contenedor sobre el que se llama
+  `childAt()` — si lo es, se autodetecta a sí misma y bloquea todo lo de
+  debajo.
+- **Más agujeros y más grandes**: rejilla de 3x3 (9) a 4x3 (12), y el
+  tamaño de cada agujero dentro de su celda sube de 0.86 a 0.95 de la
+  celda.
+- **Agujeros más realistas**: `resource/hole.svg` rehecho — montículo
+  irregular (varias elipses superpuestas en vez de una sola), manchitas de
+  tierra más oscuras para textura, briznas de hierba alrededor del borde,
+  y el agujero central con gradiente radial para dar profundidad real en
+  vez de un óvalo plano de un solo color.
+- **Fondo entero verde**: `resource/background.svg` ya no reparte
+  cielo arriba / hierba abajo — ahora es todo verde (gradiente radial
+  sobre el mismo tono apagado, con manchas suaves de otro verde para no
+  quedar plano).
+- **El topo ahora parece salir de verdad del agujero**: antes el recorte
+  (`clip`) que oculta la mitad inferior del topo cubría todo el rectángulo
+  del montículo, mucho más grande que el agujero oscuro dibujado — así que
+  el topo "aparecía" en una zona vaga, no exactamente por el agujero.
+  Ahora `HoleSlot.qml` calcula la ventana de recorte a partir de las
+  coordenadas exactas de la elipse oscura de `hole.svg` (fija a propósito
+  en `cx120 cy88 rx66 ry28` sobre un lienzo de `240x160`, con
+  `holeImage` forzado a esa misma proporción para que no haya letterboxing
+  y las fracciones cuadren siempre igual). El topo se ve asomar justo por
+  el agujero, no por una zona genérica del montículo.
+- **Martillo al golpear un topo**: nuevo `HammerEffect.qml` +
+  `resource/hammer.svg` — al acertar sobre un topo aparece un mazo que cae
+  de golpe sobre el agujero (baja, se detiene un instante, se desvanece)
+  antes de que el propio componente se destruya solo. Se dispara desde el
+  `MultiPointTouchArea` de `AplastaTopos.qml` justo cuando `hole.whack()`
+  devuelve `true`, usando `hole.x`/`hole.y`/`hole.width` para colocarlo
+  exactamente encima del agujero acertado.
+
+### Segundo playtest — ajustes de tamaño, cabeza cortada y topo dorado (hecho)
+
+- **Agujeros más grandes y separados**: la rejilla ya no fuerza celdas
+  cuadradas (`min(width/columns, height/rows)`) — ahora cada `HoleSlot` usa
+  un ancho/alto independientes (`cellW`/`cellH` por celda), con el propio
+  agujero al 0.8 de la celda (antes 0.95) y una proporción ancha
+  (`height: width * 0.72`) que encaja mejor con el dibujo del montículo.
+  Resultado neto: agujeros bastante más grandes que antes (el aspecto ancho
+  aprovecha mejor cada celda) y con un hueco real entre ellos. Además cada
+  agujero tiene un pequeño desplazamiento aleatorio fijo (`jitterX`/`jitterY`,
+  calculado una vez con `Math.random()` al crearse, no cambia durante la
+  partida) para que la distribución no se vea como una rejilla perfecta.
+- **Topos con la cabeza cortada — arreglado**: la ventana de recorte
+  (`moleClip`) que antes intentaba ajustarse *exactamente* al óvalo oscuro
+  dibujado en `hole.svg` (solo 35% de la altura del montículo) resultó
+  demasiado baja para la altura real del topo con el tamaño que se le
+  había dado — se veía solo de ojos para abajo, sin orejas ni parte de
+  arriba de la cabeza. Solución: la ventana ahora va desde arriba del todo
+  del montículo hasta el borde inferior del óvalo (72.5% de la altura),
+  manteniendo el ancho ajustado al óvalo (sigue pareciendo que sale por el
+  agujero), y el topo se ancla arriba (`y: 0`) en vez de calcular un
+  desplazamiento `peekStart` — así se ve la cabeza entera y solo se esconde
+  la parte de abajo (tripa/patas). **Apunte para el futuro**: al recortar
+  una imagen para simular "saliendo de un agujero", más vale pecar de
+  ventana alta que de ventana ajustada al milímetro al dibujo del agujero —
+  es fácil que quede más pequeña de lo que la proporción real del sprite
+  necesita.
+- **Topo dorado (2 puntos)**: nuevo `resource/mole_gold.svg` (mismo dibujo
+  que `mole.svg`, solo cambian los colores a tonos dorados) más
+  `HoleSlot.isGolden` (elegido al azar en cada aparición,
+  `aplastatopos.js` → `GOLDEN_CHANCE = 0.2`, un topo de cada 5
+  aproximadamente) y `Activity.moleWhacked(isGolden)` que suma 2 puntos en
+  vez de 1. El manual de la actividad (`ActivityInfo.qml`) ya explica la
+  diferencia de puntos.
+- **Bug encontrado de paso**: `GRID_SIZE` en `aplastatopos.js` se había
+  quedado en `9` desde antes de subir la rejilla a 4x3 (12) en el playtest
+  anterior — los agujeros 9, 10 y 11 nunca se consideraban "libres" para
+  que saliera un topo ni se limpiaban al reiniciar. Corregido a `12` (debe
+  coincidir siempre con `columns * rows` de `holesContainer` en
+  `AplastaTopos.qml` — no hay un enlace automático entre ambos, es un
+  número que hay que mantener sincronizado a mano si se vuelve a cambiar
+  el tamaño de la rejilla).
+
+---
+
+## Fase 9 — Actividad nueva "Atrapamanzanas" (hecho, pendiente de playtest)
+
+Tercera actividad creada desde cero, inspirada en el minijuego de "Pou" de
+atrapar comida que cae. Ficheros en `src/activities/atrapamanzanas/`
+(`ActivityInfo.qml`, `AtrapaManzanas.qml`, `Apple.qml`, `HudBadge.qml`,
+`atrapamanzanas.js`, `CMakeLists.txt`, `resource/`). Añadida a
+`activities.txt` (orden alfabético, justo después de `aplastatopos`).
+
+**Mecánica**: un manzano fijo arriba de la pantalla; van cayendo manzanas
+en línea recta desde puntos al azar de la copa del árbol. Se mueve una
+cesta tocando en cualquier punto de la pantalla (la cesta se desliza hasta
+la posición X tocada, con una pequeña animación de deslizamiento, no salto
+instantáneo) para atraparlas antes de que lleguen al suelo. Cronómetro de
+60s, puntuación + récord persistente (mismo mecanismo de
+`ApplicationSettings.setCurrentLevels`/`currentLevels` que ya usa
+`aplastatopos`, con clave distinta `"atrapamanzanas-highscore"`), y
+dificultad que aumenta con el tiempo (menos tiempo de caída, más
+frecuencia de aparición, más probabilidad de que caigan dos manzanas a la
+vez) — mismo patrón de `lerp`/`difficultyFraction` que `aplastatopos.js`.
+Sin fallos por manzana no atrapada (cae y desaparece sin más, diseño
+relajado igual que el resto de la adaptación).
+
+**Detección de "atrapada"**: a diferencia de `aplastatopos` (que detecta
+toques sobre el objeto), aquí la manzana cae sola y el jugador solo
+controla la cesta — así que la comprobación de colisión la hace la propia
+manzana (`Apple.qml`) en su `Timer` de 30ms, cada tick, comparando su
+borde inferior y su centro horizontal contra la caja de la cesta (recibida
+como referencia de objeto `required property Item basket` al crearla).
+Igual que `Fruit.qml`, la posición se calcula a partir del tiempo
+transcurrido (no acumulando velocidad frame a frame) para que no haya
+deriva.
+
+**Arte propio**: manzano, manzana y cesta dibujados a mano en la paleta
+sobria de la app (mismo criterio que se decidió para `aplastatopos` —
+nada de Openclipart esta vez tampoco). Sonido de "atrapada" sintetizado
+con Python (un "pop" agudo de dos tonos cortos), mismo motivo de siempre
+para `GCSoundEffect` (`.wav` sí, `.mp3`/`.ogg` no suenan en esta build).
+
+**Verificación hecha sin jugar a mano** (siguiendo la lección de la Fase
+8): reconfigurado `cmake` completo ANTES de compilar (no solo
+`cmake --build`, para que los `.qml` nuevos queden registrados como tipos
+desde el principio), `--list-activities` confirma que se registra, y
+`--launch atrapamanzanas --window --software-renderer` con
+`QT_FORCE_STDERR_LOGGING=1` no muestra ningún error real (solo un aviso
+inofensivo y repetido en toda la app, `"Unable to assign [undefined] to
+int"` al usar `fontSize: GCText.largeSize/smallSize` — no es un fallo
+introducido aquí, probablemente ya pasa en toda la aplicación y nunca se
+había visto porque hasta la Fase 8 no se sabía lo de
+`QT_FORCE_STDERR_LOGGING`; no afecta al funcionamiento, aplastatopos hace
+exactamente lo mismo y funciona bien). **Aun así, sigue pendiente el
+verdadero visto bueno**: entrar de verdad desde el menú (no solo
+`--launch`) y jugar una partida, que es lo único que de verdad prueba el
+camino de carga real del menú y las sensaciones de juego (tamaño de
+cesta, velocidad de caída, si la cesta responde bien al tacto).
+
+### Primer playtest — bug de manzanas que no caían, y ajustes visuales (hecho)
+
+- **Bug real: nunca caía ninguna manzana.** En `atrapamanzanas.js`,
+  `createApple()` tenía una comprobación de más,
+  `if (appleComponent.status !== Component.Ready) return`, copiada por
+  precaución sin fijarme en que `Component` (el tipo, para acceder a su
+  enum `Ready`) **no está disponible sin importarlo** dentro de un fichero
+  `.pragma library` — `fruitslice.js`/`aplastatopos.js` nunca lo
+  necesitan porque no lo usan. Cada intento de crear una manzana lanzaba
+  un `ReferenceError` silencioso dentro del `Timer` de turno y la función
+  volvía sin crear nada, sin ningún efecto visible ni mensaje (los errores
+  dentro de `onTriggered` de un `Timer` no siempre se ven si no se está
+  mirando activamente la consola). **Arreglado quitando esa comprobación
+  de más** — el patrón correcto (igual que `fruitslice`) es llamar
+  directamente a `component.createObject(...)` y comprobar si el
+  resultado es `null`, sin mirar `.status` antes.
+- **Por qué no lo detecté antes de que lo probara el usuario**: mis
+  comprobaciones con `--launch` abren la actividad en el estado "listo"
+  (con el botón "Iniciar" visible) pero **nunca pulsan el botón**, así que
+  todo el código de la partida en sí (que solo se dispara al llamar a
+  `Activity.startGame()`) nunca se llegó a ejecutar en esas pruebas. Para
+  confirmar el arreglo sin depender del usuario, esta vez se añadió
+  temporalmente un `Timer` que llama a `Activity.startGame()` a los 500ms
+  de cargar la actividad (con `--launch atrapamanzanas`), se comprobó que
+  no salía ningún error, y se quitó ese `Timer` antes de dar el arreglo
+  por bueno. **Apunte para el futuro**: para verificar de verdad una
+  actividad de tipo arcade con botón de "Iniciar" sin poder jugar a mano,
+  hace falta forzar el arranque de la partida con un timer temporal así —
+  `--launch` por sí solo NO llega a probar nada de lo que pasa dentro de
+  la partida.
+- **Árbol con tronco gordo y hojas arriba**: `resource/tree.svg` rehecho
+  con un tronco bastante más ancho y alto (antes era un palito fino que
+  casi no se veía) y la copa de hojas claramente por encima. Las manzanas
+  ahora también empiezan a caer desde la parte baja de la copa
+  (`canopyBounds().bottom`, ~55% de la altura del árbol) en vez de aparecer
+  de la nada por encima de toda la pantalla — así se ve mejor que salen
+  del árbol.
+- **Cesta a ras de suelo**: quitado el margen inferior que dejaba la
+  cesta flotando un poco por encima del borde de la zona de juego —
+  ahora `y: playArea.height - height` exacto.
+- **Nombres del menú separados en palabras**: "Aplastatopos" →
+  "Aplasta topos", "Atrapamanzanas" → "Atrapa manzanas" (solo cambia el
+  `title:` que se ve en el menú — el nombre interno de carpeta/fichero
+  QML de cada actividad se deja igual, no afecta a nada técnico).
+
+### Segundo playtest — de "manzano" a "lluvia de comida" (hecho)
+
+El usuario pidió quitar el árbol y las manzanas del manzano del todo y
+convertirlo en una lluvia de comida variada que cae directamente del
+cielo (más fiel al minijuego de "Pou" que inspiró la actividad). Cambios:
+
+- Quitado `resource/tree.svg` y el `Image` del árbol de
+  `AtrapaManzanas.qml` — ya no hay manzano, solo cielo.
+- `Apple.qml` ahora recibe el dibujo como parámetro
+  (`required property string source`, mismo patrón que `Fruit.qml` de
+  `fruitslice`) en vez de tener `apple.svg` fijo a fuego — así el mismo
+  componente sirve para cualquier alimento.
+- Nuevos `resource/banana.svg` y `resource/grapes.svg` (mismo criterio de
+  siempre: dibujado a mano, paleta sobria), y `atrapamanzanas.js` elige al
+  azar entre manzana/plátano/uvas en cada aparición (`FOOD_TYPES`).
+  Fácil añadir más alimentos en el futuro: solo hace falta un SVG nuevo y
+  añadir su ruta a ese array.
+- La comida ahora cae desde fuera de la pantalla por arriba
+  (`startY: -items.appleSize`) y se reparte por casi todo el ancho de la
+  zona de juego (`spawnBounds()`, 6%-94%), en vez de limitarse a la copa
+  de un árbol que ya no existe.
+- Título cambiado a "Lluvia de comida" (antes "Atrapa manzanas") y texto
+  de ayuda actualizado para hablar de "comida" en general. El nombre
+  interno de carpeta/fichero (`atrapamanzanas/AtrapaManzanas.qml`) se ha
+  dejado igual a propósito — es un detalle técnico invisible para el
+  usuario y renombrarlo habría sido bastante más trabajo/riesgo (mover
+  carpeta, actualizar `activities.txt`, `CMakeLists.txt`, todas las rutas
+  `qrc:/...` de cada fichero) sin ningún beneficio para el juego en sí.
+
+### Tercer playtest — suelo, velocidad, icono y "reiniciar récords" global (hecho)
+
+- **Cesta que parecía flotar sobre el suelo**: el motivo era que la franja
+  verde de "suelo" estaba dibujada a fuego en `resource/background.svg` a
+  una altura fija (960-1080 de un lienzo de 1080), pero la cesta se coloca
+  en `playArea.height` (que depende de la altura real del HUD/barra
+  inferior en cada resolución) — casi nunca coincidían exactamente, y a
+  veces quedaba un hueco de cielo entre la cesta y la franja verde.
+  **Arreglado quitando la franja del SVG y dibujándola en QML** (un
+  `Rectangle` anclado a `playArea.bottom`, mismo sitio exacto que usa la
+  cesta) — así quedan pegadas siempre, sea cual sea la resolución.
+  **Apunte para el futuro**: cualquier elemento "de suelo" que tenga que
+  alinearse con algo posicionado dinámicamente (como la cesta aquí) mejor
+  dibujarlo en QML anclado a esa misma referencia, no como parte fija del
+  fondo SVG.
+- **Velocidad de caída aumentada**: `fallDuration` baja de
+  `lerp(4200,2200,t)` a `lerp(3200,1600,t)` ms (cae en el aire, de
+  principio a fin de la partida, entre un 24-27% más rápido).
+- **Icono del menú actualizado**: mostraba solo una manzana sobre la
+  cesta; ahora muestra cesta + manzana + plátano cayendo, para que se
+  entienda que es "comida variada", no solo manzanas (a falta de que el
+  usuario confirme si se refería a esto con "cambia el dibujito" — si se
+  refería a otra cosa, decírmelo).
+- **"Reiniciar récords" en Ajustes (para todas las actividades con
+  puntuación)**: nuevo botón en `src/activities/menu/ConfigurationItem.qml`
+  (la pantalla de Ajustes de toda la app, icono de llave inglesa del menú
+  principal — **es un fichero del núcleo de GCompris, no de una actividad
+  concreta**), al final de la lista, con confirmación Sí/No
+  (`Core.showMessageDialog`, mismo patrón que usa el propio menú para
+  otros avisos). Al confirmar, pone a cero las claves
+  `aplastatopos-highscore` y `atrapamanzanas-highscore` guardadas vía
+  `ApplicationSettings.setCurrentLevels`. **Si se añade una actividad
+  nueva con récord persistente en el futuro, hay que añadir su clave a
+  mano a la lista `highScoreKeys` de ese botón** — no hay ningún registro
+  automático de "qué actividades tienen récord". Texto del botón escrito
+  directamente en español (igual que en las actividades nuevas) porque es
+  contenido añadido sin entrada en el catálogo de traducción real.
+
+### Cuarto playtest — comida desde más arriba/más rápida, "Corta la fruta" a un solo nivel (hecho)
+
+- **Atrapamanzanas**: la comida ahora empieza a caer desde
+  `-appleSize * 3` en vez de `-appleSize` (bastante más arriba de la
+  pantalla, así el trayecto visible es más largo) y la duración de caída
+  baja otra vez, de `lerp(3200,1600,t)` a `lerp(2900,1450,t)` ms (un
+  ~10% más rápido encima del aumento de la vez anterior).
+- **"Corta la fruta" (`fruitslice`) reducido a un único nivel**: a
+  petición del usuario, quitados los niveles 1-5 — se deja solo la
+  configuración que antes era el nivel 6 (`spawnInterval: 1100, target:
+  32, doubleChance: 0.35`, el más rápido/difícil de los 6 originales) como
+  única dificultad, fija. Cambios: `levelProperty` en `fruitslice.js`
+  reducido a un solo elemento, y quitado `level` de
+  `BarEnumContent { value: help | home | level }` en `FruitSlice.qml`
+  (junto con `onPreviousLevelClicked`/`onNextLevelClicked` y el binding
+  `bar.level`) — ya no hay flechas de nivel en la barra inferior, solo
+  ayuda y inicio. Al completar las 32 frutas sigue saliendo la animación
+  de flor/bonus (eso no se ha tocado), simplemente vuelve a la misma
+  única configuración en vez de subir a un "nivel 7" inexistente.
+
+### Tableros de ajedrez y damas demasiado pequeños (hecho)
+
+`Chess.qml`/`Checkers.qml` calculan el tamaño de casilla con
+`cellSize: Math.min(fórmula_ancho, fórmula_alto)` para dos "estados" de
+diseño (vertical/horizontal, según `isVertical`). En horizontal (el caso
+normal en una pantalla ancha 16:9 como la del marco táctil), la fórmula de
+ANCHO tiene mucho margen de sobra, así que en la práctica **la de ALTO es
+siempre la que manda** — y esa dividía por `10` (8 casillas + 2 de
+margen "de sobra"), cuando la columna de botones de control
+(`controls`) ya limita su propia altura a la del tablero
+(`height: chessboard.height`) y no necesita ese margen extra para nada.
+Bajado el divisor de `10` a `8.5` en la rama `horizontalLayout` de ambos
+ficheros (**no** se ha tocado la fórmula de ancho ni el estado vertical,
+que si necesita ese margen extra para la fila de controles apilada encima
+del tablero) — el tablero sale bastante más grande sin tocar el resto del
+diseño (controles, márgenes, proporción tablero/controles), porque todo lo
+demás sigue calculándose a partir del mismo `cellSize`, solo que ahora
+parte de una cifra mayor. **Apunte para el futuro**: si algún otro tablero
+(`checkers_2players`, `chess_2players`, `chess_partyend`, que comparten
+piezas de este mismo patrón) se ve pequeño, mirar primero cuál de las dos
+mitades del `Math.min` es la que de verdad manda antes de tocar nada — solo
+merece la pena ajustar esa, la otra no cambia nada visualmente.
+
+**Segunda pasada, más agresiva** (a petición del usuario, "no lo verá bien
+la gente mayor" si se queda corto): bajado el divisor de alto de `8.5` a
+`7`, y el de ancho de `12` a `10` (para que no se convierta en el nuevo
+cuello de botella ahora que el de alto ha crecido tanto). Además,
+`layoutArea.anchors.bottomMargin` baja de `bar.height * 1.2` a
+`bar.height` — ese 20% de más por encima de la altura real de la barra
+inferior era hueco vacío desaprovechado entre el tablero y la barra, y
+recuperarlo da altura extra gratis sin ningún riesgo (la barra sigue
+teniendo su sitio exacto, ni un pixel menos). Piezas, resaltados de
+casillas y controles se ajustan solos porque todos se calculan a partir
+del mismo `items.cellSize` — no ha hecho falta tocar nada más.
+
+**Tercera pasada, hacia atrás** (la segunda pasada se pasó de grande,
+"ahora no se ve bien"): valores dejados a medio camino entre la primera
+pasada (`8.5`/`12`/`bar.height*1.2`) y la segunda (`7`/`10`/`bar.height`):
+divisor de alto `7.75`, de ancho `11`, `bottomMargin: bar.height * 1.1`.
+Pendiente de que el usuario confirme si este punto medio ya cuadra o hay
+que afinar más en un sentido u otro.
+
+---
+
+## Fase 10 — Iconos de la barra más pequeños, y el menú aprovecha el hueco al ocultarla (hecho)
+
+Sí sabía a qué se refería el usuario: los 5-6 iconos circulares de la
+barra inferior (inicio/G/ayuda/llave/lista) y el icono de "tres líneas"
+que la esconde/muestra (`openBar` en `src/core/Bar.qml`) comparten el
+mismo tamaño, `bar.buttonSize`.
+
+- **Iconos más pequeños**: `Bar.qml`, `buttonSize` baja de `104 * ratio`
+  (puesto en la Fase 2) a `82 * ratio` — sigue siendo más grande que el
+  original de GCompris (`78`), pero ya no domina la pantalla como antes.
+  Este valor se usa en **toda la app** (es un componente del núcleo, no
+  de una actividad), incluido el icono de tres líneas, así que un solo
+  cambio arregla ambos a la vez.
+  **Efecto secundario esperado**: como `bar.height` baja un poco, los
+  tableros de ajedrez/damas (que restan `bar.height` en su fórmula de
+  ancho y usan `bar.height * 1.1` como margen inferior, ver más arriba)
+  ganarán un pelín de tamaño de rebote (cálculo estimado: unas pocas
+  unidades de porcentaje, no debería notarse mucho, pero si al probarlo
+  se ven demasiado grandes otra vez, es por esto).
+- **El menú aprovecha el hueco al ocultar la barra**: antes, aunque los
+  botones desaparecieran al tocar el icono de tres líneas, la rejilla de
+  actividades (`activitiesGrid` en `Menu.qml`) seguía terminando en el
+  mismo `bar.top` de siempre — `bar.height` no cambia con
+  `ApplicationSettings.isBarHidden` (solo se ocultan los botones hijos,
+  el icono de tres líneas se queda), así que no se ganaba ningún hueco
+  visible. Cambiado el anclaje inferior de la rejilla a
+  `ApplicationSettings.isBarHidden ? activityBackground.bottom : bar.top`
+  — al ocultar la barra, la rejilla llega hasta abajo del todo y aparecen
+  más iconos de actividades de golpe (no se hacen más grandes los
+  iconos en sí — `iconWidth`/`activityCellWidth`/`Height` son valores
+  fijos — sino que caben más filas a la vez sin hacer scroll).
+  **Sin animación de transición** en este cambio de tamaño (salta al
+  instante) — si se quiere que se vea igual de suave que el rebote de los
+  botones al esconderse, sería un `Behavior`/`AnchorAnimation` aparte, no
+  hecho por ahora al no haberse pedido explícitamente.
+
+**Corrección: tableros "gigantes" tras reducir la barra — vuelta a los
+valores originales, no un ajuste más encima.** Al probar con los botones
+de la barra ya reducidos (Fase 10, `104→82`), los tableros de
+ajedrez/damas salieron "gigantes". Antes de seguir ajustando divisores a
+ciegas, caída en la cuenta real: **el motivo original de "muy pequeños" no
+era que la fórmula del tablero fuera conservadora — era que la Fase 2
+había agrandado mucho los botones de la barra (`78→104`), y eso encogía
+`layoutArea.height`** (la fórmula resta `bar.height`/usa
+`bar.height * 1.2` como margen). Ahora que los botones de la barra vuelven
+a bajar cerca de su tamaño original (`75`, ver más abajo), **se ha
+revertido `Chess.qml`/`Checkers.qml` a sus divisores originales de
+GCompris (`12`/`10`, margen `bar.height * 1.2`)** en vez de seguir
+acumulando ajustes sobre una barra que ya no existe en ese tamaño. Si
+sigue viéndose pequeño con la barra ya reducida, es la primera vez que se
+prueba esta combinación (divisores originales + barra pequeña), así que
+tocaría agrandar desde aquí, no siguiendo la cadena de parches anteriores.
+
+**Iconos de la barra reducidos otra vez**: `buttonSize` baja de `82` a
+`75` en `Bar.qml` (ya muy cerca del original `78` de antes de la Fase 2).
+
+**Recuadro de fecha/hora del menú reducido**: `clockBar` en `Menu.qml`
+baja de `GCStyle.bigButtonHeight * 1.4` a `* 0.85` — el texto en sí no se
+ha tocado, solo el alto del rectángulo que lo envuelve (menos aire
+alrededor, no letras más pequeñas).
+
+**Marco oscuro del tablero de ajedrez, reducido**: en la captura que envió
+el usuario se veía que el rectángulo marrón oscuro (`boardBg`) alrededor
+del tablero de 8x8 era mucho más ancho de lo necesario — dejaba un margen
+de **una casilla entera** por lado (`cellSize * 10` para un tablero de
+`cellSize * 8`), cuando lo único que hay ahí son las coordenadas A-H/1-8
+(`font.pixelSize: cellSize * 0.5`). Bajado a `cellSize * 9.2` (margen de
+~0.6 casillas por lado, suficiente para las letras/números sin cortarlas)
+en `boardBg` y en `boardBorder` (el rectángulo decorativo de detrás, que
+hay que mantener igualado a mano — no se recalcula solo). **Las damas NO
+necesitaban este arreglo**: su tablero es de 10x10 y su `boardBg` ya usaba
+`cellSize * 10 + baseMargins` — casi sin margen de sobra, porque además no
+tiene coordenadas dibujadas (no hay `letters`/`numbers` en
+`Checkers.qml`). No se ha tocado el tamaño de las piezas/casillas en sí en
+este ajuste (`items.cellSize` no cambia) — solo el marco se ha hecho más
+fino, lo que ya hace que las piezas se vean más protagonistas dentro del
+mismo hueco.
+
+**Aumento pequeño y deliberado, ya con las proporciones confirmadas
+buenas**: una vez el usuario confirmó que el tamaño (divisores originales
+12/10) y el marco recién recortado se veían bien, pidió agrandar "el
+conjunto" (tablero + piezas) un poco más. Subido a `11.2`/`9.3` (frente a
+los originales `12`/`10`) en ambos ficheros — un incremento modesto
+(~7-8%) a partir de una base ya confirmada, no otra ronda de saltos
+grandes. De paso, limpiado un comentario duplicado que se había quedado en
+`Checkers.qml` de una edición anterior.

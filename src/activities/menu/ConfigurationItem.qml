@@ -450,6 +450,35 @@ Item {
                 serverConfigPage.visible = true;
             }
         }
+
+        Rectangle {
+            width: dialogConfig.contentWidth
+            height: GCStyle.thinBorder
+            color: GCStyle.darkBorder
+        }
+
+        // Elderly-friendly build: lets the user reset the high scores kept by
+        // the from-scratch arcade activities (aplastatopos, atrapamanzanas).
+        // Written directly in Spanish like the new activities themselves —
+        // this string has no entry in the real .po translation catalog.
+        GCButton {
+            id: resetHighScoresButton
+            height: GCStyle.smallButtonHeight
+            width: dialogConfig.contentWidth
+            text: qsTr("Reiniciar récords de las actividades")
+            onClicked: {
+                Core.showMessageDialog(dialogConfig.parent,
+                    qsTr("Esto pondrá a cero el récord guardado de todas las actividades. ¿Seguro?"),
+                    qsTr("Sí"), function() {
+                        var highScoreKeys = ["aplastatopos-highscore", "atrapamanzanas-highscore"]
+                        for (var i = 0; i < highScoreKeys.length; ++i)
+                            ApplicationSettings.setCurrentLevels(highScoreKeys[i], ["0"])
+                    },
+                    qsTr("No"), null,
+                    null
+                )
+            }
+        }
     }
 
     property bool isAudioVoicesEnabled: ApplicationSettings.isAudioVoicesEnabled

@@ -111,6 +111,19 @@ ActivityBase {
             anchors.top: instructionPanel.bottom
             anchors.topMargin: GCStyle.halfMargins
             anchors.bottom: parent.bottom
+            // Elderly-friendly build: was bar.height * 1.2 — that 20% buffer on
+            // top of the bar's own height was just wasted empty space between
+            // the board area and the bar, reclaimed here for a bigger board.
+            // Elderly-friendly build: back to the original bar.height * 1.2.
+            // The real reason the board looked "muy pequeño" in the first
+            // place was that the bar's own buttons had been enlarged a lot
+            // (Fase 2, buttonSize 78→104), which shrank layoutArea.height —
+            // not that this formula itself was too conservative. Now that the
+            // bar buttons are back down near their original size (→75, see
+            // Bar.qml), the original board proportions here are appropriate
+            // again; the various board-formula tweaks made in between (while
+            // the bar was still oversized) are reverted rather than stacked
+            // on top of a bar size that no longer exists.
             anchors.bottomMargin: ApplicationSettings.isBarHidden ? GCStyle.baseMargins : bar.height * 1.2
         }
 
@@ -220,8 +233,12 @@ ActivityBase {
                 name: "horizontalLayout"; when: !items.isVertical
                 PropertyChanges {
                     items {
-                        cellSize: Math.min((layoutArea.width  - GCStyle.baseMargins * 3 - bar.height) / 12,
-                                    (layoutArea.height - GCStyle.baseMargins) / 10)
+                        // Elderly-friendly build: small bump up from the
+                        // original 12/10 divisors, requested once the overall
+                        // proportions (bar size, board frame) were confirmed
+                        // good — a modest, deliberate increase this time.
+                        cellSize: Math.min((layoutArea.width  - GCStyle.baseMargins * 3 - bar.height) / 11.2,
+                                    (layoutArea.height - GCStyle.baseMargins) / 9.3)
                     }
                     controlsArea {
                         width: (layoutArea.width - boardBg.width) * 0.5

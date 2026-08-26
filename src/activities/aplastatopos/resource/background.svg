@@ -1,0 +1,14 @@
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+  <!-- Elderly-friendly build: new activity, hand-drawn to match the app's sober palette -->
+  <defs>
+    <radialGradient id="grass" cx="50%" cy="38%" r="75%">
+      <stop offset="0" stop-color="#9BAE86"/>
+      <stop offset="1" stop-color="#748A66"/>
+    </radialGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#grass)"/>
+  <ellipse cx="300" cy="820" rx="260" ry="70" fill="#87996F" opacity="0.5"/>
+  <ellipse cx="1650" cy="260" rx="300" ry="80" fill="#87996F" opacity="0.4"/>
+  <ellipse cx="1500" cy="920" rx="280" ry="75" fill="#6C8060" opacity="0.5"/>
+  <ellipse cx="220" cy="200" rx="240" ry="65" fill="#6C8060" opacity="0.4"/>
+</svg>

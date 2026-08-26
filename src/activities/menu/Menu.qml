@@ -289,7 +289,8 @@ ActivityBase {
             anchors.top: activityBackground.top
             anchors.left: activityBackground.left
             anchors.right: activityBackground.right
-            height: GCStyle.bigButtonHeight * 1.4
+            // was * 1.4 — too tall a banner just for one line of text, reduced at the user's request
+            height: GCStyle.bigButtonHeight * 0.85
             color: GCStyle.lightTransparentBg
 
             property var now: new Date()
@@ -504,7 +505,11 @@ ActivityBase {
                         // grid starts right below the clock/date banner
                         return clockBar.bottom
                 }
-                bottom: bar.top
+                // Elderly-friendly build: when the bar is hidden (via the
+                // three-line toggle), let the activity grid use that freed-up
+                // space too, instead of always reserving the bar's full
+                // height — reveals more activity tiles at once.
+                bottom: ApplicationSettings.isBarHidden ? activityBackground.bottom : bar.top
                 right: activityBackground.right
                 margins: GCStyle.halfMargins
                 rightMargin: 0

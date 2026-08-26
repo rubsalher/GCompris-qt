@@ -11,6 +11,8 @@ align4
 align4_2players
 # alphabet-sequence
 # analog_electricity
+aplastatopos
+atrapamanzanas
 # baby_keyboard
 # baby_mouse
 # baby_tangram

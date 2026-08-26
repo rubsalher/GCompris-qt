@@ -161,11 +161,11 @@ ActivityBase {
 
         Bar {
             id: bar
-            level: items.currentLevel + 1
-            content: BarEnumContent { value: help | home | level }
+            // Elderly-friendly build: only one difficulty (the old level 6)
+            // is kept, so there is nothing to navigate between — no level
+            // buttons shown.
+            content: BarEnumContent { value: help | home }
             onHelpClicked: activity.displayDialog(dialogHelp)
-            onPreviousLevelClicked: Activity.previousLevel()
-            onNextLevelClicked: Activity.nextLevel()
             onHomeClicked: activity.home()
         }
 

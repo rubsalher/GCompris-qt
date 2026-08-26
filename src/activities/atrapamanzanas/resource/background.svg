@@ -1,0 +1,13 @@
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+  <!-- Elderly-friendly build: new activity, hand-drawn to match the app's sober palette.
+       Plain sky only — the ground strip is drawn in QML instead, anchored
+       to the real bottom of the play area so it always lines up with the
+       basket regardless of screen size. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#DCE8DA"/>
+      <stop offset="1" stop-color="#F2EFE9"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#sky)"/>
+</svg>
