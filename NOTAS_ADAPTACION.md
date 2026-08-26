@@ -534,3 +534,90 @@ una galería opcional de fondos para dibujar, no una dependencia dura como
 las de arriba) — no se ha investigado a fondo ni tocado, de momento no han
 dado ningún fallo visible al jugar. Si `simplepaint` o `sketch` fallan al
 elegir cierto fondo, es la primera sospecha a revisar.
+
+---
+
+## Fase 7 — Traducción al español, quitar hangman, y actividad nueva "Corta la fruta" (hecho)
+
+**Traducción a español**: funcionaba en inglés a pesar de tener `-DSKIP_TRANSLATIONS=OFF`
+porque `SKIP_TRANSLATIONS` es una variable CACHE de CMake — quitar el flag `-D`
+de la línea de comandos **no la resetea**, se queda en el último valor que se
+le puso (`ON`) hasta que se pasa explícitamente `-DSKIP_TRANSLATIONS=OFF`.
+Además hacía falta instalar `gettext` para Windows (no viene con Qt ni con
+MinGW) — se usó el paquete portable de
+[mlocati/gettext-iconv-windows](https://github.com/mlocati/gettext-iconv-windows),
+descomprimido en `C:\Users\Utente\gettext-tools\`, con su `bin\` añadido al
+PATH al compilar. El reloj/fecha del menú también tenía el mismo problema:
+`Qt.formatDateTime` usa el locale del sistema operativo, no el idioma
+elegido dentro de la app — se cambió a `Qt.locale(ApplicationSettings.locale).toString(...)`
+en `Menu.qml` para que synchronice con el idioma de la app.
+
+**`hangman` quitado**: dependía en duro de la actividad `lang` (todo su
+diccionario de palabras) y de `reversecount` (imágenes de bonus) — se
+intentó mantenerlas compiladas-pero-ocultas (mismo patrón que
+`paintings`/`babymatch` etc., ver Fase 6), y aunque llegó a abrir, el
+usuario decidió quitar `hangman` del todo. `lang` y `reversecount` se
+volvieron a comentar en `activities.txt` porque ya no las necesita nadie.
+
+**Actividad nueva "Corta la fruta" (`fruitslice`)**: no es una actividad de
+GCompris, la hemos creado desde cero para que la gente mayor mueva más el
+brazo (pensado para el marco IR + proyector grande) — va saliendo fruta en
+arco (a veces también por los lados) y hay que pasar el dedo/ratón por
+encima para "cortarla". Ficheros en
+`src/activities/fruitslice/` (`ActivityInfo.qml`, `FruitSlice.qml`,
+`Fruit.qml`, `fruitslice.js`, `CMakeLists.txt`, `resource/`).
+
+Cosas aprendidas al construirla, útiles para la próxima actividad nueva que
+se quiera añadir:
+
+- **Imágenes de fruta**: sacadas de la colección "Frutas-collection" de la
+  autora `sanja` en Openclipart (misma fuente/criterio que `memory`, CC0).
+  **Cuidado al elegir una imagen solo por el nombre**: la primera "naranja"
+  que se cogió (`orange-apelsinas`, id 168553) resultó ser un dibujo de una
+  naranja **ya cortada en gajos**, no una naranja entera — se notó porque
+  en el juego "salía ya cortada". Se detectó mirando los colores del SVG:
+  un patrón con **cientos de fragmentos repetidos en solo 2-3 colores** es
+  buena señal de que es una ilustración tipo gajos/sección en vez de fruta
+  entera y sólida (un SVG de fruta entera normal tiene pocas decenas de
+  formas, no cientos). Se sustituyó por `simple-orange` (id 26783, autor
+  `laobc`) y `pear` (id 62065, autor `pawelf`), ambas mucho más simples y sí
+  enteras.
+- **Sonido**: `GCSoundEffect` (basado en `SoundEffect` de QtMultimedia) en
+  este build **solo reproduce bien `.wav`** — se probó primero un `.mp3` de
+  Freesound y luego un `.ogg` del mismo sonido, ninguno de los dos sonó
+  (sin ningún error en el log). Todos los demás sonidos de GCompris que
+  usan `GCSoundEffect` en el repo original son `.wav`, así que al final se
+  generó un `.wav` sintético propio con un script de Python (ruido +
+  barrido de tono, sin depender de descargar nada) y ahí sí sonó. **Para
+  cualquier sonido nuevo de `GCSoundEffect`: usar `.wav` directamente,
+  no perder tiempo con mp3/ogg.**
+- **Física de la fruta**: arco parabólico calculado por tiempo transcurrido
+  (no acumulando velocidad frame a frame, así no hay deriva). El "corte" se
+  detecta igual que en `erase`: `MultiPointTouchArea` + `childAt(x, y)`
+  sobre un `Item` contenedor separado del de la estela visual (para que la
+  estela no interfiera con la detección del corte). Al cortar, la fruta se
+  parte en dos mitades recortando (clip) la misma imagen dos veces en vez
+  de necesitar sprites de "mitad de fruta" hechos a mano.
+- **Sin traducción**: como es contenido nuevo que no existe en GCompris
+  original, no hay ninguna entrada en los `.po` para sus textos — se ha
+  escrito el texto directamente en español dentro de `qsTr(...)` en
+  `ActivityInfo.qml` (funciona igual, simplemente no cambia si se pone la
+  app en otro idioma).
+
+### Ajustes hechos tras probarlo jugando (feedback del usuario)
+
+- Arcos más altos, algo de fruta saliendo por los lados, tamaños variables
+  por fruta (nunca demasiado pequeña), a veces salen 2 frutas a la vez
+  (más probable en niveles altos), y se dobló el total de fruta necesaria
+  por nivel (antes 6-16, ahora 12-32) porque el juego se hacía corto.
+  Gravedad bajada para que todo vuele más despacio, dando tiempo a
+  alcanzarlo.
+
+### Para continuar en otra sesión/chat
+
+Lo primero que debería hacer una sesión nueva es leer este fichero
+(`NOTAS_ADAPTACION.md`) entero y `git log --oneline` en `gcompris-qt-src/`
+para ver el estado exacto. Punto de partida rápido para volver a compilar:
+ver los flags de `cmake` usados en esta fase (`-DCOMPRESSED_AUDIO=ogg
+-DSKIP_TRANSLATIONS=OFF` además de los de la Fase 1), y añadir
+`C:\Users\Utente\gettext-tools\bin` al PATH.

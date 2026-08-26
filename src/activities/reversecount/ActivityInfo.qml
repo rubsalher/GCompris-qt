@@ -7,6 +7,10 @@
 import core 1.0
 
 ActivityInfo {
+  // elderly-friendly build: kept compiled (hangman/Hangman.qml reuses its
+  // bonus animation images) but hidden from the menu, not one of the
+  // chosen activities for this build
+  enabled: false
   name: "reversecount/Reversecount.qml"
   difficulty: 2
   icon: "reversecount/reversecount.svg"

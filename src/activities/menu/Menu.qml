@@ -309,7 +309,9 @@ ActivityBase {
                 fontSize: 22
                 font.weight: Font.DemiBold
                 color: GCStyle.darkText
-                text: clockBar.capitalize(Qt.formatDateTime(clockBar.now, "dddd d MMMM")) +
+                // use the app's own chosen language for the day/month names, not the
+                // OS locale, so it stays in sync with the rest of the translated UI
+                text: clockBar.capitalize(Qt.locale(ApplicationSettings.locale).toString(clockBar.now, "dddd d MMMM")) +
                       "   •   " + Qt.formatDateTime(clockBar.now, "hh:mm")
             }
         }

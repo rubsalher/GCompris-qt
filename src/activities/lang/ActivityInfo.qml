@@ -13,6 +13,10 @@
 import core 1.0
 
 ActivityInfo {
+  // elderly-friendly build: kept compiled (hangman/hangman.js imports its
+  // vocabulary dataset directly) but hidden from the menu, not one of the
+  // chosen activities for this build
+  enabled: false
   name: "lang/Lang.qml"
   difficulty: 4
   icon: "lang/lang.svg"

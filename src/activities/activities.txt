@@ -67,6 +67,7 @@ fifteen
 # fractions_create
 # fractions_find
 frieze
+fruitslice
 # geo-country
 # geography
 # gletters
@@ -84,7 +85,7 @@ frieze
 # guess24
 guesscount
 # guessnumber
-hangman
+# hangman
 # hanoi
 hanoi_real
 # hexagon

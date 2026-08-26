@@ -1,0 +1,26 @@
+<svg viewBox="0 0 1052.4 610.28" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5A4128"/>
+      <stop offset="1" stop-color="#402D19"/>
+    </linearGradient>
+  </defs>
+  <rect width="1052.4" height="610.28" fill="url(#wood)"/>
+  <g stroke="#4A331E" stroke-width="3" opacity="0.6">
+    <path d="M0,60 Q260,50 526,62 T1052,58"/>
+    <path d="M0,140 Q260,150 526,138 T1052,146"/>
+    <path d="M0,220 Q260,210 526,224 T1052,214"/>
+    <path d="M0,300 Q260,312 526,298 T1052,306"/>
+    <path d="M0,380 Q260,368 526,382 T1052,372"/>
+    <path d="M0,460 Q260,472 526,458 T1052,466"/>
+    <path d="M0,540 Q260,528 526,542 T1052,532"/>
+  </g>
+  <g stroke="#EDEAE3" stroke-width="4" stroke-linecap="round" opacity="0.28">
+    <line x1="150" y1="120" x2="420" y2="90"/>
+    <line x1="620" y1="200" x2="900" y2="230"/>
+    <line x1="250" y1="380" x2="520" y2="410"/>
+    <line x1="700" y1="450" x2="950" y2="420"/>
+    <line x1="80" y1="480" x2="300" y2="500"/>
+    <line x1="500" y1="150" x2="640" y2="260"/>
+  </g>
+</svg>
