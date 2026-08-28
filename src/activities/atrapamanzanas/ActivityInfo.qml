@@ -20,7 +20,7 @@ ActivityInfo {
   //: Help prerequisite
   prerequisite: qsTr("Ninguno.")
   //: Help manual
-  manual: qsTr("Pulsa \"Iniciar\" para empezar. Del cielo va cayendo comida: toca la pantalla donde quieras y la cesta se moverá hasta ahí para atraparla antes de que llegue al suelo (si se te escapa, desaparece sin más, no pasa nada). Tienes 60 segundos, y la partida se va poniendo un poco más rápida según avanza. Intenta superar tu récord.")
+  manual: qsTr("Pulsa \"Iniciar\" para empezar. Del cielo va cayendo comida: toca la pantalla donde quieras y la cesta se moverá hasta ahí para atraparla antes de que llegue al suelo (si se te escapa, desaparece sin más, no pasa nada). Tienes 60 segundos, y la partida se va poniendo un poco más rápida según avanza. Hay 3 niveles de velocidad, cada vez más rápido: cámbialos con las flechas de la barra de abajo. Intenta superar tu récord.")
   credit: qsTr("Actividad nueva, creada para esta adaptación.")
   section: "fun"
   createdInVersion: 0

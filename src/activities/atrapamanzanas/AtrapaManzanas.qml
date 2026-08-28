@@ -57,6 +57,10 @@ ActivityBase {
             property int highScore: 0
             property int remainingSeconds: Activity.TOTAL_SECONDS
             property string gameState: "ready" // "ready" | "playing" | "over"
+            property int currentLevel: activity.currentLevel
+            onCurrentLevelChanged: activity.currentLevel = currentLevel
+            property int numberOfLevel: 0
+            onNumberOfLevelChanged: activity.numberOfLevel = numberOfLevel
             property alias spawnTimer: spawnTimer
             property alias countdownTimer: countdownTimer
             property alias catchSound: catchSound
@@ -92,22 +96,6 @@ ActivityBase {
                 left: parent.left
                 right: parent.right
                 margins: GCStyle.baseMargins
-            }
-
-            // Ground strip, anchored to the real bottom of the play area so
-            // it always lines up exactly with the basket, whatever the
-            // screen size — drawing it in the static background.svg instead
-            // made it drift out of alignment with the basket.
-            Rectangle {
-                id: ground
-                anchors {
-                    left: parent.left
-                    right: parent.right
-                    bottom: parent.bottom
-                }
-                height: playArea.height * 0.1
-                color: "#9BAE86"
-                opacity: 0.55
             }
 
             Item {
@@ -218,8 +206,11 @@ ActivityBase {
 
         Bar {
             id: bar
-            content: BarEnumContent { value: help | home }
+            level: items.currentLevel + 1
+            content: BarEnumContent { value: help | home | level }
             onHelpClicked: activity.displayDialog(dialogHelp)
+            onPreviousLevelClicked: Activity.previousLevel()
+            onNextLevelClicked: Activity.nextLevel()
             onHomeClicked: activity.home()
         }
     }

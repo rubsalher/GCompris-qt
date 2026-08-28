@@ -4,11 +4,14 @@
  * A rain of food falls from the sky at random points across the screen;
  * move the basket by touching anywhere to catch it before it hits the
  * ground (uncaught food just disappears, no penalty). Runs for a fixed
- * countdown and gets a bit faster as it goes on.
+ * countdown and gets a bit faster as it goes on. Three selectable levels
+ * make the whole round progressively faster (level itself doesn't change
+ * during a round — only the automatic ramp within a round does).
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 .pragma library
+.import "qrc:/gcompris/src/core/core.js" as Core
 
 var TOTAL_SECONDS = 60
 
@@ -16,6 +19,16 @@ var FOOD_TYPES = [
     "qrc:/gcompris/src/activities/atrapamanzanas/resource/apple.svg",
     "qrc:/gcompris/src/activities/atrapamanzanas/resource/banana.svg",
     "qrc:/gcompris/src/activities/atrapamanzanas/resource/grapes.svg"
+]
+
+// Three difficulty levels, each one faster overall than the last (fall
+// duration in ms, spawn gap in ms + a bit of random jitter on top of it).
+// Within a single round, difficulty still ramps gently from the "start"
+// to the "end" value as the 60s countdown advances (see difficultyFraction).
+var levelProperty = [
+    { fallStart: 2900, fallEnd: 1450, gapStart: 1600, gapEnd: 700, gapJitter: 300 },
+    { fallStart: 2200, fallEnd: 1100, gapStart: 1200, gapEnd: 550, gapJitter: 220 },
+    { fallStart: 1600, fallEnd: 800,  gapStart: 900,  gapEnd: 420, gapJitter: 170 }
 ]
 
 var items
@@ -28,6 +41,8 @@ var appleComponent = Qt.createComponent("qrc:/gcompris/src/activities/atrapamanz
 function start(activity_, items_) {
     activity = activity_
     items = items_
+    items.numberOfLevel = levelProperty.length
+    items.currentLevel = Core.getInitialLevel(items.numberOfLevel)
     resetGame()
 }
 
@@ -36,6 +51,16 @@ function stop() {
     items.spawnTimer.stop()
     items.countdownTimer.stop()
     destroyApples()
+}
+
+function nextLevel() {
+    items.currentLevel = Core.getNextLevel(items.currentLevel, items.numberOfLevel)
+    resetGame()
+}
+
+function previousLevel() {
+    items.currentLevel = Core.getPreviousLevel(items.currentLevel, items.numberOfLevel)
+    resetGame()
 }
 
 function resetGame() {
@@ -92,8 +117,9 @@ function lerp(a, b, t) {
 function scheduleNextApple() {
     if (!isPlaying)
         return
+    var level = levelProperty[items.currentLevel]
     var t = difficultyFraction()
-    var gap = lerp(1600, 700, t) + Math.random() * 300
+    var gap = lerp(level.gapStart, level.gapEnd, t) + Math.random() * level.gapJitter
     items.spawnTimer.interval = gap
     items.spawnTimer.restart()
 }
@@ -114,8 +140,9 @@ function spawnApple() {
 }
 
 function createApple() {
+    var level = levelProperty[items.currentLevel]
     var t = difficultyFraction()
-    var fallDuration = lerp(2900, 1450, t)
+    var fallDuration = lerp(level.fallStart, level.fallEnd, t)
     var bounds = items.spawnBounds()
     var spawnX = bounds.left + Math.random() * (bounds.right - bounds.left)
     var source = FOOD_TYPES[Math.floor(Math.random() * FOOD_TYPES.length)]

@@ -53,6 +53,7 @@ drawing_wheels
 # drawletters
 # drawnumbers
 # enumerate
+encajabloques
 # erase
 # erase_2clic
 # erase_clic
@@ -92,7 +93,7 @@ guesscount
 hanoi_real
 # hexagon
 # imagename
-instruments
+# instruments (moved to the bottom, see below)
 # keyboard_training
 # land_safe
 # lang
@@ -113,7 +114,7 @@ instruments
 maze
 # mazeinvisible
 # mazerelative
-melody
+# melody (moved to the bottom, see below)
 memory
 # memory-case-association
 # memory-case-association-tux
@@ -132,8 +133,8 @@ memory
 # memory-math-mult-div
 # memory-math-mult-div-tux
 # memory-math-mult-tux
-memory-sound
-memory-sound-tux
+# memory-sound
+# memory-sound-tux
 # memory-tux
 # memory-wordnumber
 # mining
@@ -164,9 +165,9 @@ paintings
 # peg_solitaire
 # penalty
 photo_hunter
-piano_composition
+# piano_composition (moved to the bottom, see below)
 # planegame
-play_piano
+# play_piano (moved to the bottom, see below)
 # play_rhythm
 # positions
 # programmingMaze
@@ -199,6 +200,13 @@ tangram
 tic_tac_toe
 tic_tac_toe_2players
 traffic
+# Sound/music activities kept at the very bottom of the list on purpose
+# (elderly-friendly build: menu order follows this file's order top to
+# bottom, so this is what puts them last in the menu grid).
+# instruments
+melody
+piano_composition
+play_piano
 # vertical_addition
 # vertical_subtraction
 # vertical_subtraction_compensation

@@ -470,7 +470,7 @@ Item {
                 Core.showMessageDialog(dialogConfig.parent,
                     qsTr("Esto pondrá a cero el récord guardado de todas las actividades. ¿Seguro?"),
                     qsTr("Sí"), function() {
-                        var highScoreKeys = ["aplastatopos-highscore", "atrapamanzanas-highscore"]
+                        var highScoreKeys = ["aplastatopos-highscore", "atrapamanzanas-highscore", "encajabloques-highscore"]
                         for (var i = 0; i < highScoreKeys.length; ++i)
                             ApplicationSettings.setCurrentLevels(highScoreKeys[i], ["0"])
                     },

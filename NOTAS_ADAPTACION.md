@@ -1192,3 +1192,320 @@ los originales `12`/`10`) en ambos ficheros — un incremento modesto
 (~7-8%) a partir de una base ya confirmada, no otra ronda de saltos
 grandes. De paso, limpiado un comentario duplicado que se había quedado en
 `Checkers.qml` de una edición anterior.
+
+---
+
+## Fase 11 — "Lluvia de comida": 3 niveles de velocidad, y fondo de bosque (hecho)
+
+- **3 niveles seleccionables** (antes solo había un ajuste automático
+  dentro de la partida, sin niveles de verdad): añadido
+  `levelProperty` en `atrapamanzanas.js` con 3 configuraciones de
+  velocidad cada vez más rápidas (duración de caída y hueco entre
+  apariciones), y cableado el patrón estándar de niveles de GCompris
+  (`items.currentLevel`/`numberOfLevel` sincronizados con `activity.*`,
+  `Core.getInitialLevel/getNextLevel/getPreviousLevel`, flechas de nivel
+  en la `Bar` con `BarEnumContent { value: help | home | level }`) —
+  mismo patrón que ya se había quitado de "Corta la fruta" en la Fase 9,
+  aquí en cambio se ha añadido de cero. Cambiar de nivel reinicia la
+  partida a "listo" (no cambia la dificultad a media partida). El
+  aumento automático de velocidad *dentro* de cada nivel (según pasan
+  los 60s) se mantiene igual que antes, ahora aplicado sobre los valores
+  base de cada nivel en vez de unos fijos.
+  **Verificado** con el mismo truco de siempre (`Timer` temporal que
+  llama a `Activity.startGame()`, más `--start-level 3` para probar el
+  nivel más rápido) — sin errores en ninguno de los 3 niveles.
+- **Fondo de bosque**: `resource/background.svg` rehecho — nubes suaves
+  arriba, dos capas de montañas/colinas en tonos azul-grisáceo y verde
+  apagado, y una hilera de árboles (copa redonda + tronco) a los lados
+  de abajo, dejando el centro despejado para que no estorbe a la comida
+  que cae ni a la cesta. **Ojo**: no se ha vuelto a añadir ninguna franja
+  de "suelo" de color fijo al SVG — esa banda se quitó a propósito en la
+  Fase 9 porque no coincidía con la posición real de la cesta en
+  pantalla (que depende del tamaño de HUD/barra); el "suelo" verde que
+  se ve en el juego lo sigue dibujando `AtrapaManzanas.qml` en QML,
+  anclado de verdad a la cesta.
+
+**Fondo rehecho al estilo bosque denso que pidió el usuario (con foto de
+referencia)**: la composición (troncos grandes en primer plano, copa de
+hojas pegada arriba del todo, matojos/rocas abajo, troncos finos y
+difuminados al fondo para dar profundidad) sigue la foto que compartió,
+pero **redibujada desde cero en los tonos sobrios habituales de la app**
+en vez de copiar los colores vivos/estilo dibujos animados de la foto
+original (mismo criterio que en la Fase 5 con el fondo del menú: se
+recoge el espíritu de una imagen de referencia, no se reproduce tal cual,
+también por si tuviera derechos de autor). `resource/background.svg`.
+
+**Hierba de verdad en el suelo por el que se mueve la cesta**: nuevo
+`resource/grass.svg` (franja con puntas de hierba dentadas arriba,
+pensada para repetirse en horizontal) sustituye al `Rectangle` de color
+liso que había antes. En QML, `ground` pasa de `Rectangle` a `Image` con
+`fillMode: Image.TileHorizontally` — importante: `sourceSize` se fija a
+la altura real de la franja *manteniendo la proporción original del SVG*
+(no al ancho completo), si no el mosaico no repite y sale una sola
+"hierba" gigante y deformada en vez de repetida. Sigue anclado al fondo
+real de `playArea` igual que antes, así que se mantiene pegado a la
+cesta.
+
+**Corrección tras ver la primera versión del bosque en pantalla (captura
+del usuario) — tres fallos reales, no solo de gusto:**
+
+1. **"Los árboles flotan"**: los troncos grandes y los finos de fondo
+   paraban en `y≈950-970` de un lienzo de `1080`, dejando un hueco antes
+   del borde inferior — arreglado alargándolos todos hasta `y=1080`
+   exacto, sin excepción.
+2. **"Cosas verdes mal" donde se mueve la cesta**: eran los óvalos de
+   "matojos" que se habían puesto en `background.svg` a una altura fija
+   (`y≈870-950`), sin tener en cuenta que la franja de hierba de verdad
+   la dibuja `AtrapaManzanas.qml` en QML sobre `playArea` (que no ocupa
+   toda la pantalla, tiene el HUD arriba y la barra abajo restando
+   espacio) — los dos "verdes" no coincidían y se veían como manchas
+   sueltas encima de la hierba real. **Quitados del todo los matojos y
+   piedras del SVG de fondo** — la única hierba/vegetación del suelo
+   ahora es la franja de `grass.svg` en QML, ya anclada de verdad a la
+   cesta.
+3. **"El fondo blanco"**: el degradado `#DCD8B8→#C7CBAA` salía
+   demasiado pálido en pantalla — cambiado a un verde-tierra más oscuro y
+   cálido (`#B7AE86→#8E9678`), que ya no lee como "vacío/blanco" entre
+   los troncos. Aumentada también la densidad de troncos finos de fondo
+   (de 8 a 10, mejor repartidos) para que se note más el "bosque" y no
+   solo unos pocos troncos sueltos.
+
+**Bug real en `grass.svg` (no solo estética): el zigzag de las puntas de
+hierba no encajaba consigo mismo al repetirse** (dibujado a mano con
+`l` relativos, la suma de subidas/bajadas no volvía exactamente al mismo
+punto de partida cada `400px`), así que `Image.TileHorizontally` en QML
+sacaba parches con costuras/huecos visibles en vez de una franja
+continua — es justo lo que se veía en la captura. **Arreglado usando un
+`<pattern>` de SVG** (`resource/grass.svg` ahora tiene su propio lienzo
+ancho de `1920x140` con un patrón de triángulos que SVG repite
+matemáticamente exacto, sin cálculo a mano) en vez de dibujar el zigzag
+entero a pulso — ya no hace falta ni `TileHorizontally` en QML, con
+`Image.Stretch` normal es suficiente porque el SVG ya trae el repetido
+metido dentro. **Apunte para el futuro**: si hay que crear otro patrón
+repetitivo (hierba, agua, ladrillos...), usar siempre `<pattern>` de SVG
+en vez de calcular un zigzag/repetición a mano — es fácil que la suma no
+cuadre exacta y salgan costuras como esta.
+
+**Hierba demasiado fina y bosque "flotando" debajo de ella**: en la
+captura se veía que la franja de hierba era una cinta finita a media
+pantalla, con bosque normal (sin hierba) tanto encima como debajo de
+ella hasta el borde real de la pantalla — el motivo es que `playArea` (el
+área de juego en sí) no ocupa toda la pantalla, deja hueco para el HUD
+arriba y la barra de abajo, así que lo que se ve *por debajo* de
+`playArea` (justo donde está la barra) es directamente el
+`background.svg`, sin ninguna hierba de QML encima. Dos cambios:
+
+1. `ground.height` sube de `playArea.height * 0.1` a `* 0.35` en
+   `AtrapaManzanas.qml` — la cesta queda bien dentro de la hierba, no solo
+   rozando el borde de arriba.
+2. `background.svg` ahora tiene su propio degradado de "suelo" en la
+   franja de abajo (`y=760` a `1080`, transición de aire a verde), *antes*
+   de los troncos, para que la zona que queda fuera de `playArea` (detrás
+   de la barra inferior) también lea como suelo/césped y no como bosque
+   cortado en seco justo donde empieza la cinta de hierba de QML.
+
+**Límite honesto de esta sesión**: el usuario pidió "ve revisando tú
+mismo hasta que esté bien", pero en este entorno de trabajo no hay forma
+de ver la app en pantalla de verdad (ver gotcha de la Fase 8 sobre la
+herramienta de automatización) — los cambios de esta ronda están
+verificados matemáticamente (proporciones, que no haya huecos) y sin
+errores de QML, pero el visto bueno final de cómo queda *de verdad* en
+pantalla sigue necesitando que lo mire el usuario.
+
+**El arreglo anterior no bastó — causa real encontrada esta vez.** La
+captura siguiente seguía mostrando bosque sin hierba entre la cinta verde
+y el borde real de la pantalla. El problema de fondo: `ground` estaba
+anclado a `parent.bottom`, es decir, al fondo de **`playArea`** — y
+`playArea` deja hueco debajo para la barra inferior (`bottom: bar.top`),
+así que su "fondo" no es el fondo real de la pantalla. Todo lo que queda
+entre el fondo de `playArea` y el borde de verdad de la pantalla se ve
+directamente el `background.svg`, sin ninguna hierba de QML encima —
+el degradado de suelo añadido en el fondo (intento anterior) tampoco
+llegaba a notarse lo suficiente ahí.
+
+**Arreglo de verdad**: `ground.anchors.bottom` cambia de `parent.bottom`
+a **`activityBackground.bottom`** — el borde real de la pantalla, no el
+de `playArea` — y la altura pasa a calcularse sobre
+`activityBackground.height` (`* 0.4`) en vez de `playArea.height`. Así la
+hierba llega sí o sí hasta el borde de verdad, sin depender de cuánto
+hueco deje `playArea` para la barra ni de suposiciones sobre cómo encaja
+`background.svg` en pantalla. La cesta sigue estando cómodamente dentro
+de la franja (empieza bastante por encima de donde está la cesta).
+
+**El usuario compartió una segunda foto de referencia** (bosque con
+troncos curvados/gruesos, piedras con musgo, copa densa, hierba en
+primer plano — pinta de recurso gráfico de pago) y pidió literalmente
+"borra este fondo y pon este nuevo". **No se ha insertado esa imagen tal
+cual** — mismo motivo de siempre (parece stock de pago, y es justo el
+mismo criterio ya aplicado en la Fase 5 con la imagen de referencia del
+menú) — en su lugar, `resource/background.svg` se ha rehecho de cero
+copiando la *composición* (un par de troncos ahora dibujados con curvas
+Bézier en vez de trapecios rectos, piedras con musgo cerca del suelo,
+copa mucho más densa y superpuesta en capas arriba, matojos de hierba
+extra junto a las bases de los troncos) pero en la paleta sobria propia
+de la app, no los colores vivos de la foto. El arreglo de "la hierba
+llega hasta abajo de verdad" de la ronda anterior (anclado a
+`activityBackground.bottom`) no se ha tocado, sigue igual.
+
+**Franja de hierba de QML quitada, a petición del usuario** — se deja
+solo el `background.svg` (bosque + degradado de suelo integrado en el
+propio SVG). Quitado el `Image { id: ground }` de `AtrapaManzanas.qml` y
+borrado `resource/grass.svg` (ya no lo usa nadie). **Recordatorio**: al
+borrar un fichero de recurso hace falta reconfigurar `cmake` (no solo
+`cmake --build`), si no Ninja falla con "missing and no known rule to
+make it" porque la lista de recursos generada en la configuración
+anterior todavía lo espera — mismo tipo de gotcha que al *añadir*
+ficheros nuevos, pero al revés.
+
+---
+
+## Fase 12 — Quitados los juegos de memoria de sonido, y sonido/música al final del menú (hecho)
+
+- **Borrados**: `memory-sound` y `memory-sound-tux` (juego de memoria por
+  sonidos) — comentados en `activities.txt`, ya no compilan ni aparecen.
+  Comprobado antes de quitarlos que ninguna otra actividad activa los usa
+  como "donante" (no aparecen referenciados en el código de otras
+  actividades).
+- **Movidos al final de la lista del menú**: `instruments`, `melody`,
+  `piano_composition`, `play_piano` (los 4 juegos de sonido/música que
+  quedaban activos). **Importante para el futuro**: el orden en que
+  aparecen los iconos en el menú **es el mismo orden en que están escritas
+  las líneas activas (sin `#`) en `activities.txt`**, de arriba a abajo —
+  no es alfabético por título ni por sección. Así que para reordenar el
+  menú, lo que hay que mover es la posición de la línea en este fichero,
+  no nada en el código QML. Las 4 líneas se han sacado de su sitio
+  alfabético y puesto justo después de `traffic` (la última actividad
+  activa antes de esta fase), rompiendo a propósito el orden alfabético
+  del fichero para esas 4 líneas — el comentario "Keep it sorted" de la
+  cabecera del fichero es solo una convención de mantenimiento, no algo
+  que rompa la compilación si no se sigue.
+
+**"Instrumentos musicales" (`instruments`) también borrado**, comentado
+en `activities.txt`. Antes de quitarlo comprobé que nada dependa de él
+como "donante" obligatorio: `simplepaint` y `sketch` sí lo mencionan
+(`resource/background.svg` de `instruments` aparece en su galería
+opcional de fondos para dibujar), pero es la misma referencia "blanda" ya
+documentada en la Fase 6 — si alguien elige justo ese fondo concreto en
+`simplepaint`/`sketch` puede salir en blanco, el resto de la actividad no
+se rompe (ya pasa lo mismo con otras decenas de fondos de esa galería que
+apuntan a actividades ya inactivas, no es nada nuevo). `colors` (la
+actividad de la que `instruments` sí dependía) se queda tal cual, sigue
+activa por sí misma sin cambios.
+
+---
+
+## Fase 13 — Actividad nueva "Encaja bloques" (inspirada en Block Blast) (hecho)
+
+Cuarta actividad creada desde cero. El usuario pidió reproducir el juego
+móvil "Block Blast" y compartió una captura; antes de construirlo se
+buscaron las reglas exactas en internet para no adivinarlas (ver fuentes
+en la conversación): tablero 8x8, 3 piezas a la vez, sin rotación, sin
+límite de tiempo, se borran filas/columnas completas, puntuación por
+tamaño de pieza + bonus por línea + bonus de combo si se borra más de una
+línea a la vez, partida terminada cuando ninguna de las 3 piezas caben ya
+en el tablero. Ficheros en `src/activities/encajabloques/`
+(`ActivityInfo.qml`, `EncajaBloques.qml`, `PieceTile.qml`, `HudBadge.qml`,
+`encajabloques.js`, `CMakeLists.txt`, `resource/`). Añadida a
+`activities.txt` en orden alfabético.
+
+**Cambio deliberado respecto al original: toca-y-toca en vez de arrastrar.**
+El juego real se juega arrastrando cada pieza con el dedo hasta el
+tablero. Aquí se cambió a "toca una pieza de la bandeja para
+seleccionarla, luego toca la casilla del tablero donde tiene que ir la
+esquina superior izquierda de su caja" — un arrastre preciso y sostenido
+es más difícil para gente mayor en un marco táctil IR que dos toques
+simples, y además es bastante más sencillo de implementar de forma
+robusta sin poder probarlo a mano en este entorno. Un toque en una
+casilla que no encaja no hace nada (solo un sonido de aviso, `crash.wav`
+reutilizado del núcleo — es el sonido de "respuesta incorrecta" que ya
+usa toda la app) y la pieza se queda seleccionada para volver a intentarlo
+sin penalización. **Pendiente para el futuro si se pide**: una vista
+previa en vivo de dónde caería la pieza mientras se mantiene el dedo, algo
+más cercano al juego original — no se ha hecho en esta primera versión
+por simplicidad y para minimizar riesgo de bugs de arrastre no
+verificables visualmente.
+
+**Piezas**: 31 formas (ficha suelta, dominó, tromino/tetromino/pentominó
+en línea, cuadrado 2x2 y 3x3, trominós de esquina, y las 4 rotaciones de
+L, J, S/Z y T) en `SHAPES` de `encajabloques.js`, cada una una lista de
+`[fila, columna]` relativos, siempre normalizada para que la caja
+delimitadora empiece en `(0,0)` — el toque en el tablero coloca esa
+esquina de la caja ahí, sea o no una casilla rellena de la pieza en sí
+(por ejemplo la T "hacia arriba" tiene la esquina `(0,0)` vacía).
+
+**Colores**: en vez de un único bloque en escala de grises re-teñido con
+un efecto (`MultiEffect.colorization`, cuyo comportamiento exacto no se
+podía verificar sin ver la pantalla), se hicieron **5 SVG ya coloreados**
+(`resource/block_blue.svg`, `_gold`, `_purple`, `_green`, `_red`, mismo
+bisel/sombreado en los 5, solo cambia el tono) — más ficheros pero cero
+incertidumbre de cómo se va a ver, dado que no hay forma de comprobarlo
+en pantalla en este entorno.
+
+**Verificación exhaustiva sin poder jugar a mano**: como esta actividad
+NO tiene botón de "Iniciar" (la partida empieza sola al entrar, como el
+juego real, sin límite de tiempo) `--launch encajabloques` sí ejercita de
+verdad `newGame()`/generación de piezas/comprobación de partida-terminada
+al arrancar — a diferencia de las actividades tipo arcade de fases
+anteriores. Además, para probar la interacción de tocar-y-colocar
+(que si depende de un toque real), se añadió temporalmente un `Timer` que
+llamaba a `Activity.selectPiece()`/`Activity.attemptPlace()` con
+coordenadas conocidas — incluida una prueba a propósito de solape
+(colocar una pieza encima de otra ya puesta, debe fallar) y una prueba
+determinista de borrado de línea (rellenar una fila a mano dejando un
+hueco, colocar una ficha suelta ahí, comprobar que la puntuación sube lo
+esperado Y que la fila queda vacía otra vez) — **las tres pruebas dieron
+el resultado exacto esperado** antes de quitar el `Timer` de prueba.
+Aparte de eso, ningún error de QML en ninguna comprobación.
+
+## Fase 14 — "Encaja bloques": arrastrar en vez de tocar, y fondo oscuro (hecho)
+
+Petición: "Añade un fondo obscuro, y haz que los bloques se puedan
+deslizar para ver como los coloca y tener mas precision" — la primera
+versión de Fase 13 era tocar-para-elegir-y-tocar-para-colocar; se pidió
+cambiarlo a arrastrar de verdad, con vista previa en vivo (justo lo que
+la Fase 13 había dejado apuntado como "pendiente si se pide").
+
+**Fondo**: `activityBackground.color` pasó de `GCStyle.lightBg` a un
+azul marino oscuro (`"#1E2A38"`) — además de ser lo pedido, hace que los
+5 colores de bloque resalten más que sobre fondo claro (como en el Block
+Blast real).
+
+**Arrastre**: se rehizo la interacción entera siguiendo el patrón ya
+usado en `erase.js`/`fruitslice.js` de esta adaptación — un único
+`MultiPointTouchArea` que cubre toda `playArea` (tablero + bandeja),
+NO uno por ficha, porque un área de toque limitada a una sola ficha deja
+de recibir actualizaciones en cuanto el dedo se sale de los límites de
+esa ficha durante el arrastre. `PieceTile.qml` quedó como componente
+puramente visual (sin lógica de toque propia, solo dibuja la pieza o la
+oculta mientras se arrastra vía `beingDragged`). Toda la lógica de
+arrastre vive en `encajabloques.js`: `beginDrag(slot)` al empezar,
+`updateDragPosition(fila, columna)` en cada movimiento (recalcula qué
+casillas se ocuparían y si el hueco es válido), `endDrag(fila, columna)`
+al soltar (coloca la pieza si es válido, si no la devuelve a su hueco sin
+penalización), y `cancelDrag()` si el toque se pierde a media partida.
+
+**Vista previa en vivo**: mientras se arrastra, las casillas del tablero
+por donde pasaría la pieza se resaltan en verde translúcido (encaja) o
+rojo translúcido (no encaja) — esto es justo la "más precisión" pedida,
+ya que antes solo se sabía si encajaba al soltar. Además se añadió una
+pieza "fantasma" (`ghost`) que sigue al dedo por encima (desplazada hacia
+arriba para no quedar tapada) mostrando la pieza que se está moviendo,
+ya que la ficha original de la bandeja se oculta mientras tanto.
+
+**Verificado** con el mismo método sin pantalla de siempre: `--launch
+encajabloques` (esta actividad no tiene botón de Iniciar, así que
+`--launch` sí ejercita `newGame()` de verdad) más un `Timer` de
+diagnóstico temporal que llamó a `beginDrag`/`updateDragPosition`/
+`endDrag` con coordenadas conocidas — colocación válida (la puntuación
+subió lo esperado) y colocación solapada (la puntuación no cambió y
+`draggingSlot` volvió a `-1` sin fallo) dieron el resultado exacto
+esperado; el `Timer` se quitó después. Ningún error de QML en ninguna
+comprobación.
+
+**Aprovechado también para cerrar dos cabos sueltos que quedaron
+pendientes de la Fase 13**: el texto de ayuda de la actividad
+(`ActivityInfo.qml`) se reescribió para explicar arrastrar en vez de
+tocar-y-tocar, y se añadió `"encajabloques-highscore"` a la lista de
+claves que borra el botón "Reiniciar récords de las actividades" en
+Ajustes (`ConfigurationItem.qml`) — antes solo incluía Aplastatopos y
+Atrapamanzanas.

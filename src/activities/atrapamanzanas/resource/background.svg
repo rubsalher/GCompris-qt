@@ -1,13 +1,99 @@
 <svg width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
-  <!-- Elderly-friendly build: new activity, hand-drawn to match the app's sober palette.
-       Plain sky only — the ground strip is drawn in QML instead, anchored
-       to the real bottom of the play area so it always lines up with the
-       basket regardless of screen size. -->
+  <!-- Elderly-friendly build: dense forest scene, composition inspired by a
+       reference image the user shared (thick curved trunks, mossy rocks,
+       dense overlapping canopy, foreground grass) — redrawn from scratch,
+       not copied, both because that reference looks like paid stock art
+       and to keep the app's own sober/muted palette instead of its bright
+       cartoon colours. -->
   <defs>
-    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#DCE8DA"/>
-      <stop offset="1" stop-color="#F2EFE9"/>
+    <linearGradient id="air" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C9AE96"/>
+      <stop offset="0.55" stop-color="#BCAE8E"/>
+      <stop offset="1" stop-color="#96A17E"/>
+    </linearGradient>
+    <linearGradient id="groundFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#96A17E" stop-opacity="0"/>
+      <stop offset="1" stop-color="#748A66" stop-opacity="1"/>
     </linearGradient>
   </defs>
-  <rect width="1920" height="1080" fill="url(#sky)"/>
+
+  <rect width="1920" height="1080" fill="url(#air)"/>
+
+  <!-- hazy distant treeline, for depth -->
+  <path d="M0 430 l60 -40 l60 30 l70 -50 l70 35 l80 -45 l80 30 l90 -40 l90 35
+           l90 -35 l90 40 l90 -30 l90 45 l90 -35 l90 30 l90 -40 l90 35
+           l90 -30 l60 20 L1920 480 L1920 560 L0 560 Z" fill="#AFA98C" opacity="0.45"/>
+
+  <!-- ground fade behind everything, so the area outside the QML grass
+       strip (e.g. behind the bottom bar) still reads as ground -->
+  <rect y="760" width="1920" height="320" fill="url(#groundFade)"/>
+
+  <!-- moss-covered rocks near the bottom -->
+  <g>
+    <ellipse cx="230" cy="920" rx="130" ry="80" fill="#8B7D68"/>
+    <ellipse cx="230" cy="880" rx="120" ry="55" fill="#7E9470"/>
+    <ellipse cx="1660" cy="930" rx="140" ry="82" fill="#8B7D68"/>
+    <ellipse cx="1660" cy="888" rx="128" ry="56" fill="#7E9470"/>
+    <ellipse cx="900" cy="960" rx="90" ry="55" fill="#8B7D68"/>
+    <ellipse cx="900" cy="932" rx="80" ry="34" fill="#8FA878"/>
+  </g>
+
+  <!-- big foreground trunks, some visibly bowed/curved -->
+  <g fill="#6E5334">
+    <!-- straight trunk -->
+    <path d="M100 30 L190 30 L215 1080 L70 1080 Z"/>
+    <!-- curved trunk, leaning right then correcting -->
+    <path d="M520 20
+             C 470 220, 640 320, 560 520
+             C 500 700, 620 860, 590 1080
+             L 430 1080
+             C 460 860, 350 700, 410 520
+             C 490 320, 330 220, 380 20 Z" fill="#7A5B3A"/>
+    <!-- straight trunk -->
+    <path d="M980 10 L1075 10 L1105 1080 L945 1080 Z"/>
+    <!-- curved trunk, leaning left -->
+    <path d="M1480 0
+             C 1560 200, 1400 300, 1470 500
+             C 1530 680, 1420 850, 1450 1080
+             L 1610 1080
+             C 1580 850, 1690 680, 1630 500
+             C 1560 300, 1720 200, 1640 0 Z" fill="#7A5B3A"/>
+    <path d="M1820 40 L1900 40 L1920 1080 L1790 1080 Z"/>
+  </g>
+  <g stroke-linecap="round" opacity="0.55">
+    <path d="M130 90 L126 1000" stroke="#5A4327" stroke-width="8"/>
+    <path d="M1015 80 L1010 1000" stroke="#5A4327" stroke-width="8"/>
+    <path d="M1850 100 L1852 1000" stroke="#5A4327" stroke-width="7"/>
+    <path d="M480 120 C 470 320, 500 480, 480 700" stroke="#6E5334" stroke-width="7" fill="none"/>
+    <path d="M1590 120 C 1600 320, 1570 480, 1590 700" stroke="#6E5334" stroke-width="7" fill="none"/>
+  </g>
+
+  <!-- small grass tufts near the trunk bases, extra detail on top of the
+       QML grass strip -->
+  <g fill="#7E9470">
+    <path d="M330 1010 q10 -50 22 0 q4 -60 20 0 q10 -46 22 0 Z"/>
+    <path d="M760 1030 q10 -50 22 0 q4 -60 20 0 q10 -46 22 0 Z"/>
+    <path d="M1230 1020 q10 -50 22 0 q4 -60 20 0 q10 -46 22 0 Z"/>
+    <path d="M1710 1030 q10 -50 22 0 q4 -60 20 0 q10 -46 22 0 Z"/>
+  </g>
+
+  <!-- dense, overlapping leafy canopy along the top -->
+  <g fill="#647A58">
+    <ellipse cx="120" cy="20" rx="260" ry="180"/>
+    <ellipse cx="520" cy="0" rx="300" ry="200"/>
+    <ellipse cx="960" cy="20" rx="280" ry="190"/>
+    <ellipse cx="1400" cy="0" rx="300" ry="200"/>
+    <ellipse cx="1830" cy="20" rx="260" ry="180"/>
+  </g>
+  <g fill="#7E9470">
+    <ellipse cx="300" cy="30" rx="200" ry="140"/>
+    <ellipse cx="740" cy="10" rx="220" ry="150"/>
+    <ellipse cx="1180" cy="30" rx="210" ry="145"/>
+    <ellipse cx="1620" cy="10" rx="220" ry="150"/>
+  </g>
+  <g fill="#8FA878" opacity="0.9">
+    <ellipse cx="480" cy="40" rx="150" ry="95"/>
+    <ellipse cx="960" cy="20" rx="160" ry="100"/>
+    <ellipse cx="1440" cy="40" rx="150" ry="95"/>
+  </g>
 </svg>
