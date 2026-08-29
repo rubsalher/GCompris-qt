@@ -165,7 +165,42 @@ ActivityBase {
     property string currentCategory: ""
     /// @endcond
 
-    property string clickMode: "play"
+    // Elderly-friendly build: the order the activities show up in the grid
+    // below, applied on top of ActivityInfoTree.menuTree — see
+    // applyMenuOrder()/menuOrderStorageKey below and ReorderActivitiesPage.qml
+    // for where the user actually edits this order from Settings.
+    readonly property string menuOrderStorageKey: "menu-activity-order"
+    property var orderedMenuTree: applyMenuOrder(ActivityInfoTree.menuTree)
+
+    // Returns a NEW array: `items` (a list of ActivityInfo, each with a
+    // .name) reordered according to the saved preference (an array of
+    // activity names) — anything not found in that saved list (e.g. an
+    // activity added since the last reorder) is appended at the end, in
+    // its original relative order, so it still shows up.
+    function applyMenuOrder(items) {
+        var saved = ApplicationSettings.currentLevels(menuOrderStorageKey);
+        if (!saved || saved.length === 0)
+            return items;
+
+        var byName = {};
+        for (var i = 0; i < items.length; ++i)
+            byName[items[i].name] = items[i];
+
+        var ordered = [];
+        var used = {};
+        for (var j = 0; j < saved.length; ++j) {
+            var found = byName[saved[j]];
+            if (found && !used[saved[j]]) {
+                ordered.push(found);
+                used[saved[j]] = true;
+            }
+        }
+        for (var k = 0; k < items.length; ++k) {
+            if (!used[items[k].name])
+                ordered.push(items[k]);
+        }
+        return ordered;
+    }
 
     signal startActivity(string activityName, int level)
 
@@ -518,7 +553,7 @@ ActivityBase {
             cellWidth: activityCellWidth
             cellHeight: activityCellHeight
             clip: true
-            model: ActivityInfoTree.menuTree
+            model: activity.orderedMenuTree
             keyNavigationWraps: true
             maximumFlickVelocity: activity.height
             boundsBehavior: Flickable.StopAtBounds
@@ -530,8 +565,7 @@ ActivityBase {
                 id: delegateItem
                 width: activityCellWidth - GCStyle.halfMargins
                 height: activityCellHeight - GCStyle.halfMargins
-                enabled: activity.clickMode === "play" || (activityInfoTreeItem.hasConfig || activityInfoTreeItem.hasDataset)
-                property var activityInfoTreeItem: ActivityInfoTree.menuTree[index]
+                property var activityInfoTreeItem: activity.orderedMenuTree[index]
                 Rectangle {
                     id: activityCard
                     width: parent.width
@@ -541,7 +575,7 @@ ActivityBase {
                 }
                 Image {
                     id: activityIcon
-                    source: "qrc:/gcompris/src/activities/" + icon
+                    source: "qrc:/gcompris/src/activities/" + activityInfoTreeItem.icon
                     anchors.top: activityCard.top
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: iconWidth - GCStyle.halfMargins
@@ -611,7 +645,7 @@ ActivityBase {
                 }
 
                 Image {
-                    source: activity.url + (favorite ? "all.svg" : "all_disabled.svg");
+                    source: activity.url + (activityInfoTreeItem.favorite ? "all.svg" : "all_disabled.svg");
                     anchors {
                         top: parent.top
                         right: parent.right
@@ -622,39 +656,7 @@ ActivityBase {
                     opacity: activityIcon.opacity
                     MouseArea {
                         anchors.fill: parent
-                        onClicked: favorite = !favorite
-                    }
-                }
-
-                Loader {
-                    id: chooseLevelLoader
-                    active: false
-                    onStatusChanged: {
-                        if (status == Loader.Ready) {
-                            displayDialog(item);
-                        }
-                    }
-
-                    sourceComponent: DialogChooseLevel {
-                        id: dialogChooseLevel
-                        displayDatasetAtStart: hasDataset
-                        currentActivity: activityInfoTreeItem
-                        inMenu: true
-
-                        onClose: {
-                            home()
-                        }
-                        onSaveData: {
-                            currentLevels = dialogChooseLevel.chosenLevels
-                        }
-                        onStartActivity: {
-                            activity.clickMode = "play"
-                            // immediately pop the Dialog to load the activity
-                            // if we don't do it immediately the page is busy
-                            // and it does not load the activity
-                            pageView.pop(StackView.Immediate)
-                            selectCurrentItem()
-                        }
+                        onClicked: activityInfoTreeItem.favorite = !activityInfoTreeItem.favorite
                     }
                 }
 
@@ -662,24 +664,17 @@ ActivityBase {
                     if(pageView.busy || !delegateItem.enabled)
                         return
 
-                    if(activity.clickMode === "play") {
-                        particles.burst(50)
-                        ActivityInfoTree.currentActivity = activityInfoTreeItem
-                        activityLoader.setSource("qrc:/gcompris/src/activities/" + ActivityInfoTree.currentActivity.name,
-                        {
-                            'menu': activity,
-                            'activityInfo': ActivityInfoTree.currentActivity,
-                            'levelFolder': currentLevels,
-                            'audioVoices': audioVoices,
-                            'loading': loading
-                        })
-                        if (activityLoader.status == Loader.Ready) loadActivity()
-                    }
-                    else {
-                        // Display configuration
-                        chooseLevelLoader.active = false;
-                        chooseLevelLoader.active = true;
-                    }
+                    particles.burst(50)
+                    ActivityInfoTree.currentActivity = activityInfoTreeItem
+                    activityLoader.setSource("qrc:/gcompris/src/activities/" + ActivityInfoTree.currentActivity.name,
+                    {
+                        'menu': activity,
+                        'activityInfo': ActivityInfoTree.currentActivity,
+                        'levelFolder': activityInfoTreeItem.currentLevels,
+                        'audioVoices': audioVoices,
+                        'loading': loading
+                    })
+                    if (activityLoader.status == Loader.Ready) loadActivity()
                     activitiesGrid.currentIndex = index
                 }
             }
@@ -907,35 +902,6 @@ ActivityBase {
             onTriggered: ActivityInfoTree.filterBySearch(searchTextField.text);
         }
 
-        Rectangle {
-            id: activityConfigTextBar
-            height: activitySettingsLabel.contentHeight + GCStyle.baseMargins
-            width: activitySettingsLabel.contentWidth + GCStyle.baseMargins * 2
-            visible: activity.clickMode === "activityConfig"
-            anchors {
-                horizontalCenter: activitiesGrid.horizontalCenter
-                bottom: bar.top
-                bottomMargin: height * 0.3
-            }
-            radius: GCStyle.halfMargins
-            border.width: GCStyle.thinBorder
-            border.color: "#8b66b2"
-            color: GCStyle.lightBg
-
-            GCText {
-                id: activitySettingsLabel
-                text: qsTr("Activity Settings")
-                width: activitiesGrid.width - GCStyle.baseMargins * 2
-                fontSizeMode: Text.Fit
-                minimumPointSize: 7
-                visible: parent.visible
-                anchors.centerIn: parent
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                color: GCStyle.darkText
-            }
-        }
-
         states: [
             State {
                 name: "horizontalState"; when: activityBackground.horizontal
@@ -1077,10 +1043,10 @@ ActivityBase {
             // BUG: on Windows, dynamic values in BarEnumContent are not working, so using intermediate properties as workaround to display serverStatus button
             property bool connectionAccepted: ApplicationInfo.serverConnectionAccepted
             property BarEnumContent defaultContent: BarEnumContent {
-                value: help | config | activityConfig | about | (ApplicationInfo.isMobile ? 0 : exit)
+                value: help | config | about | (ApplicationInfo.isMobile ? 0 : exit)
             }
             property BarEnumContent contentWithServerStatus: BarEnumContent {
-                value: help | config | activityConfig | about | (ApplicationInfo.isMobile ? 0 : exit) | serverStatus
+                value: help | config | about | (ApplicationInfo.isMobile ? 0 : exit) | serverStatus
             }
             onConnectionAcceptedChanged: {
                 if(connectionAccepted) {
@@ -1104,15 +1070,6 @@ ActivityBase {
             onServerStatusClicked: {
                 searchTextField.focus = false
                 activityBackground.showServerStatus()
-            }
-
-            onActivityConfigClicked: {
-                if(activity.clickMode == "play") {
-                    activity.clickMode = "activityConfig"
-                }
-                else {
-                    activity.clickMode = "play"
-                }
             }
 
             onConfigClicked: {
@@ -1205,6 +1162,17 @@ ActivityBase {
 
             ServerConfigPage {
                 id: serverConfigPage
+                onClose: {
+                    visible = false;
+                    dialogActivityConfig.configItem.visible = true;
+                }
+            }
+
+            // Elderly-friendly build: lets the user reorder the activities
+            // shown in the main menu grid, opened from the "Ordenar los
+            // juegos del menú" button added to ConfigurationItem.qml.
+            ReorderActivitiesPage {
+                id: reorderActivitiesPage
                 onClose: {
                     visible = false;
                     dialogActivityConfig.configItem.visible = true;

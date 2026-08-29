@@ -48,8 +48,9 @@ colors
 # compass
 crane
 # details
+diana
 # digital_electricity
-drawing_wheels
+# drawing_wheels
 # drawletters
 # drawnumbers
 # enumerate
@@ -114,7 +115,7 @@ hanoi_real
 maze
 # mazeinvisible
 # mazerelative
-# melody (moved to the bottom, see below)
+# melody (removed, replaced by "simon" — see its own alphabetical entry)
 memory
 # memory-case-association
 # memory-case-association-tux
@@ -183,6 +184,7 @@ redraw_symmetrical
 # scalesboard_weight
 # scalesboard_weight_avoirdupois
 # share
+simon
 simplepaint
 sketch
 # smallnumbers
@@ -204,7 +206,7 @@ traffic
 # (elderly-friendly build: menu order follows this file's order top to
 # bottom, so this is what puts them last in the menu grid).
 # instruments
-melody
+# melody (removed, replaced by "simon" — see below)
 piano_composition
 play_piano
 # vertical_addition

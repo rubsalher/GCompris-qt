@@ -457,6 +457,27 @@ Item {
             color: GCStyle.darkBorder
         }
 
+        // Elderly-friendly build: replaces the removed "Activity Settings"
+        // toggle button (the purple list icon that used to sit in the main
+        // menu's own bar) — opens a full screen with up/down arrows to
+        // reorder the activities shown in the menu grid.
+        GCButton {
+            id: reorderActivitiesButton
+            height: GCStyle.smallButtonHeight
+            width: dialogConfig.contentWidth
+            text: qsTr("Ordenar los juegos del menú")
+            onClicked: {
+                dialogConfig.visible = false;
+                reorderActivitiesPage.visible = true;
+            }
+        }
+
+        Rectangle {
+            width: dialogConfig.contentWidth
+            height: GCStyle.thinBorder
+            color: GCStyle.darkBorder
+        }
+
         // Elderly-friendly build: lets the user reset the high scores kept by
         // the from-scratch arcade activities (aplastatopos, atrapamanzanas).
         // Written directly in Spanish like the new activities themselves —
@@ -470,7 +491,7 @@ Item {
                 Core.showMessageDialog(dialogConfig.parent,
                     qsTr("Esto pondrá a cero el récord guardado de todas las actividades. ¿Seguro?"),
                     qsTr("Sí"), function() {
-                        var highScoreKeys = ["aplastatopos-highscore", "atrapamanzanas-highscore", "encajabloques-highscore"]
+                        var highScoreKeys = ["aplastatopos-highscore", "atrapamanzanas-highscore", "encajabloques-highscore", "simon-highscore", "diana-highscore"]
                         for (var i = 0; i < highScoreKeys.length; ++i)
                             ApplicationSettings.setCurrentLevels(highScoreKeys[i], ["0"])
                     },

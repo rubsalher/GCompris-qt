@@ -1509,3 +1509,499 @@ tocar-y-tocar, y se añadió `"encajabloques-highscore"` a la lista de
 claves que borra el botón "Reiniciar récords de las actividades" en
 Ajustes (`ConfigurationItem.qml`) — antes solo incluía Aplastatopos y
 Atrapamanzanas.
+
+## Fase 15 — "Boceto" (Sketch) simplificado a lápiz + goma (hecho)
+
+Petición: "La actividad de boceto la puedes hacer mas sencilla pon que
+hayan colores normales una goma para borrar a la vista que se pueda
+agrandar el grosor para dibujar y borrar, simplificalo que no hayan
+tantas cosas inecesarias". "Boceto" venía de fábrica siendo un mini
+editor de imagen completo: 6 estilos de pincel distintos (redondo,
+relleno, aerógrafo, "sketch", spray, círculos), herramientas de formas
+geométricas, degradados, sellos, texto, un selector de color con
+paletas editables y rueda de color, selector de imagen de fondo, y
+guardar/abrir archivo — todo repartido en 3 paneles plegables. Muchísimo
+para alguien mayor que solo quiere dibujar con el dedo.
+
+**Simplificado a lo esencial**, todo siempre visible en una sola barra
+arriba del lienzo (nada plegado ni escondido en menús):
+- 9 colores normales en círculos grandes (negro, rojo, naranja,
+  amarillo, verde, azul, morado, marrón, rosa) — tocar uno lo selecciona
+  y sale del modo goma automáticamente.
+- Un botón de goma de borrar bien visible (con su icono), que se queda
+  resaltado en azul mientras está activo. Tocarlo otra vez vuelve a
+  dibujar.
+- Un único control "Grosor" (`GCSlider`) que engorda o afina el trazo
+  — recuerda un grosor distinto para el lápiz y para la goma (p. ej. se
+  puede querer un lápiz fino pero una goma gorda), y muestra/edita el
+  que corresponda según si la goma está activada o no.
+- Deshacer/rehacer (flechas) y un botón de recargar en la barra de abajo
+  que borra todo el lienzo (con confirmación de "¿Quieres borrar el
+  dibujo?").
+
+**Quitado por completo** (no solo escondido): los otros 5 estilos de
+pincel, las herramientas de formas/degradados/sellos/texto, el selector
+de imagen o color de fondo, y guardar/abrir archivo — junto con sus 21
+ficheros `.qml` ya inservibles (`ToolsPanel.qml`, `ColorsPanel.qml`,
+`ColorSelector.qml`, `FilesPanel.qml`, `FoldablePanel.qml`,
+`GeometryTool(Panel).qml`, `GradientTool(Panel).qml`,
+`StampTool(Panel).qml`, `TextTool(Panel).qml`, `BrushToolPanel.qml`,
+`BackgroundSelector.qml`, `PatternSelector.qml`, `SliderColor.qml`,
+`SliderSettings.qml`, `DarkCheckBox.qml`, `ActionButton.qml`,
+`SelectionButton.qml`, `ActivityConfig.qml` — este último era solo un
+ajuste de "número de deshacer" en el diálogo de configuración de la
+actividad, que también se quitó de la barra por ser una opción de más).
+`BrushTool.qml` se recortó para dejar solo el pincel redondo (el mismo
+que ya servía tanto para dibujar como, en modo goma, para borrar — no
+hacía falta escribir nada nuevo ahí). **Importante**: antes de borrar
+nada se comprobó con `grep` que ningún otro fichero del repositorio
+dependía de ellos — la actividad `compass` (desactivada en el menú de
+esta adaptación, ver `activities.txt`) resulta que SÍ importa
+`PaletteSelector.qml` y `BackgroundColorSelector.qml` de la carpeta de
+sketch, así que esos dos ficheros (y sus iconos en `resource/`, también
+reutilizados por `compass`) se dejaron intactos.
+
+**Verificado** sin poder ver la pantalla, como siempre: tras borrar
+ficheros `.qml` hizo falta `cmake` de reconfiguración completa (no solo
+recompilar) antes del primer build. Con `--launch sketch` (esta
+actividad tampoco tiene botón de Iniciar) más un `Timer` de diagnóstico
+temporal se simuló un trazo completo, el cambio de color, activar/
+desactivar la goma con el deslizador de grosor recordando cada valor
+por separado, deshacer/rehacer, y el flujo de "borrar todo" — los 9
+`console.warn` de comprobación dieron exactamente el resultado esperado
+(p. ej. al activar la goma el deslizador mostró su propio grosor
+guardado sin tocar el del lápiz, y viceversa). También se relanzó
+`--launch compass` para confirmar que seguía arrancando sin errores tras
+tocar ficheros de su misma carpeta compartida. Ningún error de QML en
+ninguna comprobación (aparte del falso positivo ya conocido y
+documentado de `fontSize: GCText.smallSize`).
+
+**Corrección tras la primera prueba real en el marco IR**: el usuario
+reportó que ni los colores, ni la goma, ni el grosor respondían al
+tocarlos. Causa encontrada: en `Sketch.qml`, el control de "Grosor"
+(`Column` con el texto y el `GCSlider`) estaba puesto directamente
+dentro de la `Row` de la barra de herramientas con `anchors.verticalCenter`
+puesto en él mismo — y en Qt Quick, un hijo directo de `Row`/`Column`/
+`Grid` no puede tener `anchors` propios, porque `Row` coloca a sus hijos
+moviéndoles `x`/`y` ella misma; en cuanto detecta un hijo con `anchors`
+deja de funcionar para **todos** sus hijos, no solo para el que los
+tenía puestos, así que probablemente todos los botones de la barra
+(colores, goma, deshacer, rehacer) quedaron amontonados en una posición
+que no coincidía con lo que se veía en pantalla, dejando el conjunto
+prácticamente inutilizable. Solución: meter el `Column` un nivel más
+adentro, dentro de un `Item` normal sin anchors propios (que sí puede
+ser hijo directo de la `Row` sin problema), y anclar el `Column` dentro
+de ESE `Item`. Verificado que compila y arranca sin errores QML;
+pendiente de que el usuario lo vuelva a probar en el marco IR para
+confirmar que ahora sí responde al tacto (esto no se puede comprobar de
+ningún otro modo desde este entorno de desarrollo, que no tiene pantalla
+táctil ni acceso visual real al resultado).
+
+**Segunda corrección, con foto real de la pantalla** (el usuario mandó
+una captura): la primera corrección no fue suficiente. La foto reveló
+DOS fallos distintos y más importantes que el de `anchors` dentro de
+`Row`:
+
+1. **La barra era más ancha que la pantalla.** En la foto faltaba el
+   círculo negro por completo (empujado fuera del borde izquierdo) y
+   deshacer/rehacer no aparecían por ningún lado (empujados fuera del
+   borde derecho) — los 9 colores + goma + control de grosor (260px de
+   ancho él solo) + deshacer/rehacer, todo en una sola fila, sencillamente
+   no cabían en el ancho de la pantalla a este tamaño de botón grande.
+   Arreglado repartiendo la barra en **dos filas**: colores arriba,
+   goma + grosor + deshacer/rehacer abajo — comprobado con un `Timer` de
+   diagnóstico que las dos filas (1274px y 1010px) caben de sobra dentro
+   del ancho real de la barra (1888px en una pantalla de 1920).
+2. **El color/goma/grosor no se aplicaban de verdad al dibujar**, aunque
+   el botón correspondiente sí cambiaba de aspecto (por eso en la foto se
+   ve amarillo "seleccionado" con su marco azul, pero los trazos
+   dibujados salen todos en gris oscuro). Causa: el pincel (`roundBrush`
+   en `BrushTool.qml`) solo lee `items.foregroundColor` y el grosor
+   dentro de `modeInit()`, y `modeInit()` solo se llamaba UNA VEZ al
+   empezar la actividad (vía `canvasArea.init()`). En la versión
+   original de Sketch con paneles plegables, esto se disparaba de nuevo
+   cada vez que se CERRABA un panel (`ColorsPanel.onClose: {
+   items.selectedTool.toolInit(); }`) — pero la barra nueva, al no tener
+   paneles que abrir/cerrar, nunca volvía a llamarlo, así que el pincel
+   se quedaba pintando para siempre con el color/grosor que hubiera al
+   arrancar. Arreglado añadiendo una función `toolbar.refreshBrush()`
+   (llama a `brushTool.toolInit()` si el contexto del canvas ya existe)
+   invocada explícitamente al tocar un color, al tocar la goma, y en
+   cada cambio del deslizador de grosor.
+
+Verificado con un `Timer` de diagnóstico temporal que llamó a las
+mismas rutas que tocaría el dedo del usuario (cambiar color, mover el
+grosor, activar la goma) y leyó directamente `tempCanvas.ctx.strokeStyle`
+/`ctx.lineWidth` antes y después de cada cambio — los tres casos dieron
+el valor esperado exacto (p. ej. tras elegir azul, `ctx.strokeStyle`
+pasó de `#1a1a1a` a `#2e6fd9`; tras activar la goma, pasó a `#ffffff` con
+el grosor de goma en vez del de lápiz). `Timer` retirado después.
+Ningún error de QML en ninguna comprobación.
+
+**Tercera ronda tras la foto de la barra ya funcionando**: el usuario
+confirmó que colores y goma ya respondían bien, pero pidió tres cosas
+más: (1) la barra en dos filas ocupaba demasiado alto en la hoja de
+dibujo, volver a una sola fila; (2) como 9 colores grandes no caben en
+una sola fila, meterlos en una franja que se pueda deslizar con el dedo
+(con su propia barrita de desplazamiento visible) en vez de partir la
+barra en dos; (3) lo que se pinta no salía con opacidad 100%.
+
+- **Una sola fila con colores deslizables**: la barra volvió a su altura
+  de una sola fila. Los controles de tamaño fijo (goma, grosor,
+  deshacer, rehacer) se anclaron a la derecha (`toolsRow`, con
+  `anchors.right: parent.right`), y los colores pasaron a un `Flickable`
+  horizontal (`colorsFlick`) que ocupa todo el ancho que quede libre a
+  la izquierda de esos controles (`anchors.right: toolsRow.left`) —
+  contiene el `Row` de los 9 círculos de color, y se puede arrastrar con
+  el dedo para ver los que no caben en el ancho visible. Debajo del
+  `Flickable` se añadió un `ScrollBar` (de `QtQuick.Controls.Basic`,
+  igual que ya se hace para `GCSlider`) enlazado a mano a
+  `colorsFlick.visibleArea.widthRatio`/`xPosition` — se ve como una
+  barrita que también se puede arrastrar directamente para desplazar los
+  colores, y solo aparece si de verdad sobran colores que no caben
+  (`policy: colorsRow.width > colorsFlick.width ? AlwaysOn : AlwaysOff`).
+- **Opacidad 100%**: la causa era que `AbstractBrush.qml` (heredado del
+  Sketch original) trae por defecto `toolOpacity: 0.5` — en la versión
+  original esto se podía subir a 1 con un deslizador de opacidad dentro
+  del selector de color avanzado, que se quitó al simplificar la
+  actividad, dejando el pincel encallado permanentemente al 50% sin
+  ninguna forma de cambiarlo. Arreglado poniendo `toolOpacity: 1` y
+  `defaultToolOpacity: 1` directamente en `roundBrush` (dentro de
+  `BrushTool.qml`) — la goma ya estaba al 100% de fábrica
+  (`eraserOpacity: 1`), no hacía falta tocarla.
+
+Verificado con `--launch sketch` más un `Timer` de diagnóstico temporal:
+la barra bajó de dos filas a una sola (176px de alto, la mitad que
+antes), el ancho visible de la franja de colores (825px) es menor que
+el ancho total de los 9 colores (1274px) así que la barrita de
+desplazamiento sale activada como se esperaba, arrastrar
+`colorsFlick.contentX` a mano mueve correctamente la posición de la
+barrita, y `roundBrush.toolOpacity` se confirma en `1`. `Timer` retirado
+después. Ningún error de QML en ninguna comprobación.
+
+**Nota**: el usuario pidió explícitamente no generar ni mandar ningún
+zip nuevo hasta que lo pida — build compilado y verificado sin errores,
+pero pendiente de empaquetar hasta recibir esa señal.
+
+## Fase 16 — Quitado el botón "Configuración de actividad" del menú, y nuevo botón en Ajustes para ordenar los juegos (hecho)
+
+Petición, con foto del botón en cuestión (círculo morado con icono de
+lista): "Borra este boton y en ajustes créame un boto en el que yo
+pueda ordenar el orden de los juegos en el menu".
+
+**Identificado** (con ayuda de un agente de exploración): el botón era
+`bar_activity_config.svg` en la barra del menú principal
+(`Bar.qml`/`Menu.qml`), que alternaba un modo `clickMode: "play"` /
+`"activityConfig"` — en ese segundo modo, tocar una actividad ya no la
+abría, sino que enseñaba un diálogo para elegir su "dataset"/nivel
+concreto (una función de GCompris de fábrica, poco relevante para esta
+adaptación ya que casi todas las actividades complejas con datasets ya
+se habían quitado del menú en fases anteriores).
+
+**Quitado por completo** de `Menu.qml` (no solo escondido): la
+propiedad `clickMode`, el `Loader` `chooseLevelLoader` y su
+`DialogChooseLevel`, el banner morado "Activity Settings"
+(`activityConfigTextBar`), la rama `else` de `selectCurrentItem()` que
+abría ese diálogo, y el bit `activityConfig` en las dos `BarEnumContent`
+de la barra del menú (`defaultContent`/`contentWithServerStatus`) junto
+con su `onActivityConfigClicked`. **No se ha tocado `Bar.qml`** — el
+botón "activityConfig" sigue existiendo como componente genérico y
+sigue funcionando con normalidad en otras actividades que lo usan para
+su propio panel de configuración (p. ej. número de deshacer); solo se
+ha quitado su aparición concreta en la barra del menú principal.
+
+**Nuevo: ordenar los juegos del menú**. Investigado primero (con otro
+agente) cómo `ActivityInfoTree` expone la lista de actividades:
+`menuTree` (la lista ya filtrada que ve el menú, sin setter propio,
+recalculada desde cero por cada filtro) y `menuTreeFull` (la lista
+COMPLETA sin filtrar, en el orden de `activities.txt`, constante). No
+existe ninguna función en C++ para reordenar — se decidió NO tocar C++
+(sería el primer cambio en C++ de toda esta adaptación, con más riesgo
+y sin manera de probarlo tan a fondo como el QML) y en su lugar resolver
+el reordenado enteramente por el lado QML:
+
+- `Menu.qml` añade `applyMenuOrder(items)`: coge la lista que sea
+  (`ActivityInfoTree.menuTree`) y la reordena según una lista guardada
+  de nombres de actividad (cualquier actividad no guardada en esa lista
+  —p. ej. una nueva— se añade al final, en su orden original, para que
+  nunca desaparezca). El grid del menú (`activitiesGrid`) pasa de
+  `model: ActivityInfoTree.menuTree` a `model: activity.orderedMenuTree`
+  (una property que aplica `applyMenuOrder` en vivo), y el delegado
+  ajusta su `activityInfoTreeItem: ActivityInfoTree.menuTree[index]` a
+  `activity.orderedMenuTree[index]` para que el índice siga
+  correspondiendo a lo que se ve en pantalla.
+- El orden guardado se persiste con el mismo mecanismo ya usado para los
+  récords (`ApplicationSettings.setCurrentLevels("menu-activity-order",
+  [...])`/`currentLevels(...)`) — sin tocar C++ tampoco aquí.
+- **`ReorderActivitiesPage.qml`** (nueva): pantalla completa a modo de
+  lista con flechas ↑/↓ por fila (nada de arrastrar — más fiable de
+  acertar con el dedo en la pantalla táctil que un "drag", seguimos el
+  mismo criterio ya aplicado en Encaja bloques y las demás actividades
+  nuevas). Cada flecha mueve la fila Y guarda el nuevo orden al momento
+  (no hay un botón "Guardar" aparte, para no complicar la interacción).
+  Copiada la estructura general de `ServerConfigPage.qml` (barra de
+  título con aspa de cerrar, `Flickable` con `GCButtonScroll`), que ya
+  existía en el menú para el mismo propósito (una pantalla completa
+  encima de Ajustes).
+- Botón nuevo en `ConfigurationItem.qml`: "Ordenar los juegos del menú",
+  que hace `dialogConfig.visible = false; reorderActivitiesPage.visible
+  = true;` — el mismo patrón exacto que ya usaba el botón existente de
+  "Teacher's server config" para abrir `ServerConfigPage`. Esto funciona
+  porque `ReorderActivitiesPage` se declaró como hijo directo de
+  `DialogActivityConfig { id: dialogActivityConfig }` en `Menu.qml`
+  (junto a `ServerConfigPage`), y `ConfigurationItem.qml` se instancia
+  desde un `Component {}` escrito literalmente dentro de `Menu.qml` — la
+  cadena de contexto de QML deja ver los ids de `Menu.qml` desde dentro
+  del `ConfigurationItem` cargado dinámicamente, aunque sea otro
+  fichero (comprobado que YA se usaba exactamente este mecanismo para
+  `serverConfigPage`, así que no es un truco nuevo, es el patrón que
+  ya existía).
+
+**Verificado** con `--window` sin `--launch` (arranca directo en el
+menú real, a diferencia de lanzar una actividad concreta) más un
+`Timer` de diagnóstico temporal: 29 actividades activas de 36 totales
+en `menuTreeFull`, `orderedMenuTree` coincide en longitud con
+`menuTree` sin orden guardado, mover la 3ª actividad a la 1ª posición
+desde `ReorderActivitiesPage` (`moveActivity`) se refleja correctamente
+en el `ListModel`, se guarda bien en `ApplicationSettings`
+(`currentLevels("menu-activity-order")[0]` pasó a ser esa actividad), y
+volver a aplicar `applyMenuOrder` con ese ajuste guardado reproduce
+exactamente el mismo orden — el `Timer` limpió el ajuste de prueba al
+terminar (confirmado vacío después) y se quitó del código. Ningún error
+de QML en ninguna comprobación.
+
+**Corrección tras la primera prueba real**: el usuario reordenó los
+juegos de verdad y mandó una foto — a todos les había desaparecido el
+icono/foto grande (solo quedaban el título y las estrellitas de
+dificultad, con el fondo de montañas asomando donde debería ir la
+imagen). Causa: `ActivityInfoTree.menuTree` es un modelo especial de
+QML (`QQmlListProperty&lt;ActivityInfo&gt;`, una lista de objetos C++) que
+expone automáticamente cada propiedad del objeto activo del delegado
+como si fuera una variable normal dentro del delegado — así, el código
+original podía escribir simplemente `icon` o `favorite` a secas (sin
+`activityInfoTreeItem.`) y funcionaba solo. Pero `activity.orderedMenuTree`
+(la property nueva que aplica el orden guardado) es un **array de
+JavaScript normal**, y los arrays de JavaScript usados como `model:` en
+QML NO tienen esa magia de "cada propiedad se vuelve una variable
+suelta" — solo dan acceso a `index` y `modelData`. Como resultado,
+`icon` a secas ya no encontraba nada (imagen vacía = icono
+desaparecido) y lo mismo le pasaba a `favorite`. **Se encontró además un
+tercer caso más grave** del mismo problema, no visible en la foto
+porque solo se dispara al tocar un icono: dentro de la función que
+lanza la actividad (`selectCurrentItem()`) se pasaba `'levelFolder':
+currentLevels` a secas — esto habría lanzado un `ReferenceError` real
+(no solo un icono en blanco) en cuanto el usuario tocase cualquier juego
+que hubiera sido reordenado, aunque solo se detectó leyendo el código
+con cuidado, ya que mis comprobaciones automáticas de antes nunca
+"tocaban" un icono de verdad. Arreglados los tres cualificando
+explícitamente con `activityInfoTreeItem.` (`activityInfoTreeItem.icon`,
+`activityInfoTreeItem.favorite` en los dos sitios donde se leía y donde
+se escribía al marcar/desmarcar favorito, y
+`activityInfoTreeItem.currentLevels`) — se repasó el resto del delegado
+entero a mano para confirmar que ninguna otra propiedad se quedó sin
+cualificar.
+
+Verificado con `--window` (arranca en el menú real) más un `Timer` de
+diagnóstico temporal que leyó `icon`/`favorite`/`currentLevels` de las 3
+primeras actividades del **orden ya guardado de verdad por el usuario**
+(sin necesidad de simular nada) — los tres salieron con valores válidos
+y sin ningún error, p. ej. `icon=aplastatopos/aplastatopos.svg`. `Timer`
+retirado después. Ningún error de QML en ninguna comprobación. El orden
+guardado por el usuario en su prueba real se dejó intacto (no se tocó).
+
+## Fase 17 — Quitado "Melodía", actividad nueva "Simon dice" (hecho)
+
+Petición, con foto del juguete electrónico real: "Sabes el juego de
+melodia pues quitalo y haz un simon dice busca en internet lo que
+necessites saber de este juego".
+
+**Quitada "melodía"** (xilófono musical) por completo: comprobado antes
+con `grep` que ningún otro fichero dependía de su carpeta, borrada
+entera (`src/activities/melody/`, 15 ficheros) y su línea comentada en
+`activities.txt` con nota de por qué. (Nota técnica: al intentar borrar
+la carpeta con PowerShell daba "en uso" — la sesión de Bash de este
+mismo agente tenía esa carpeta como directorio de trabajo actual, que en
+Windows basta para bloquear su borrado; un `cd` fuera de ella lo
+resolvió.)
+
+**Investigado primero** (con un agente de búsqueda) el juego real
+"Simon" de Milton Bradley (1978) antes de programar nada, tal y como
+pidió el usuario: secuencia que empieza en 1 color y crece de uno en
+uno, repitiéndose ENTERA desde el principio en cada ronda (no solo el
+color nuevo); un fallo termina la partida al momento, sin reintento; las
+4 casillas tienen cada una su propio tono/nota distintos (verde
+arriba-izquierda ~415 Hz, rojo arriba-derecha ~311 Hz, amarillo
+abajo-izquierda ~252 Hz, azul abajo-derecha ~209 Hz); la velocidad de
+reproducción se acelera un poco a partir de cierta longitud de
+secuencia; existen versiones "junior" simplificadas (botones más
+grandes, más tiempo de respuesta, sin subir de velocidad) pensadas para
+niños pequeños, con la misma filosofía que esta adaptación para gente
+mayor.
+
+**Construida `simon/` desde cero**:
+- 4 tonos sintetizados con Python (`tone_{green,red,yellow,blue}.wav`,
+  ondas seno a esas mismas 4 frecuencias del juguete real, con ataque y
+  caída suaves para que no suenen como un pitido brusco).
+- El sonido de fallo reutiliza `crash.wav` del núcleo, igual que ya se
+  hace en otras actividades de esta adaptación.
+- **Sin límite de tiempo para responder** (a diferencia del juguete
+  real, que da solo ~3 segundos) — decisión deliberada siguiendo la
+  filosofía de toda esta adaptación de no meter prisa a gente mayor;
+  documentado aquí como una libertad tomada, no un descuido.
+- Los 4 cuadrantes de color en círculo se dibujan con un truco sin
+  ambigüedad geométrica: en vez de arcos SVG/`Shape` (donde acertar el
+  sentido de giro no se puede verificar sin ver la pantalla), cada
+  cuadrante es un `Item` con `clip: true` que recorta una copia de UN
+  MISMO círculo completo (mismo tamaño y posición absoluta en las 4
+  copias) — por construcción, cada recorte muestra exactamente una
+  cuarta parte sin solapes ni huecos, sin depender de banderas de arco
+  que no se puedan comprobar aquí. El icono del menú (`simon.svg`) usa
+  la misma idea con `<clipPath>` de SVG.
+- **Verificación visual real, por primera vez en esta adaptación**: al
+  guardar el SVG del icono, un hook de este entorno lo abrió solo en el
+  panel del navegador y se pudo hacer una captura de pantalla real,
+  confirmando que los 4 colores salen en el cuadrante correcto — la
+  primera vez que se ha podido comprobar algo visualmente en todo este
+  proyecto (normalmente solo se puede verificar leyendo logs). Un
+  intento de maqueta HTML del tablero completo para comprobar también el
+  diseño no funcionó (el visor de capturas no soporta bien ficheros
+  fuera de la carpeta del proyecto), así que esa parte se quedó sin
+  comprobar visualmente, solo por lógica.
+- Lógica del juego (`simon.js`): secuencia completa se reproduce desde
+  el principio cada ronda, con `Timer`s encadenados (`playbackTimer`
+  para ir encendiendo/apagando cada color con su tono,
+  `pressFlashTimer` para el destello breve al tocar,
+  `nextRoundTimer` para la pausa antes de la ronda siguiente).
+  Puntuación = longitud de secuencia alcanzada; récord persistido con
+  `ApplicationSettings.setCurrentLevels("simon-highscore", ...)`, mismo
+  mecanismo que las demás actividades nuevas. Añadida también esa clave
+  al botón "Reiniciar récords de las actividades" en Ajustes (para no
+  repetir el olvido de la Fase 13 con Encaja bloques).
+
+**Verificado** con `--launch simon` (arranca solo, sin botón de
+Iniciar) más un `Timer` de diagnóstico temporal que forzó una secuencia
+conocida y simuló: un acierto (avanza de ronda, la secuencia crece de 1
+a 2), un fallo deliberado (termina la partida con la puntuación y el
+récord correctos), y `newGame()` (reinicia bien). Los cinco resultados
+coincidieron exactamente con lo esperado. También se relanzó el menú
+principal entero (`--window` sin `--launch`) para confirmar que
+"melodía" desaparecida y "Simon dice" nueva conviven sin errores con el
+resto de actividades y con el orden personalizado ya guardado por el
+usuario. Ningún error de QML en ninguna comprobación.
+
+**Corrección de volumen**: el usuario probó los tonos y salían muy
+bajitos. Los 4 `.wav` se regeneraron con el mismo script de Python
+subiendo la amplitud de la onda de 0.55 a 0.95 (de un máximo de 1.0,
+sin llegar a saturar) — un aumento de sonoridad de cerca de +4.4 dB.
+No se ha tocado el volumen general de efectos de sonido de la app
+(`ApplicationSettings.audioEffectsVolume`, del que `GCSoundEffect`
+depende siempre) porque eso afectaría a TODAS las actividades, no solo
+a esta — la queja era específica de Simon, así que se subió solo el
+propio sonido grabado. Verificado que compila y arranca sin errores;
+no se puede comprobar el volumen real de otro modo desde este entorno
+sin altavoces reales.
+
+## Fase 18 — Actividad nueva "Diana" (hecho)
+
+Petición: "crear un juego con una diana gigante con diferentes franjas
+de colores y puntos, para que los abuelos tiren una pelota pequeña
+intenten tirarla al centro, a la derecha donde no esté la diana pon la
+puntuación, sin límite de tiempo".
+
+**Interacción**: tocar el sitio de la diana donde se quiera tirar
+lanza la pelota ahí — no hace falta arrastrar ni "apuntar y soltar"
+(complicaría la precisión táctil sin aportar nada, siguiendo el mismo
+criterio de simplicidad que el resto de esta adaptación). Para que
+siga pareciendo un tiro de verdad y no "toca donde quieras y aciertas
+siempre", cada tiro tiene una pequeña dispersión aleatoria alrededor
+del punto tocado (`SCATTER_FACTOR = 0.06`, un 6% del radio de la diana)
+— se puede apuntar al centro y casi siempre acertar cerca, pero no con
+precisión perfecta, como un tiro real.
+
+**5 franjas de color y puntos** (esquema clásico de diana de tiro con
+arco): blanco=10, negro=20, azul=30, rojo=40, dorado (centro)=50 — con
+el número de puntos impreso dentro de cada franja, en el radio de
+abajo, para que siempre se vea claro cuánto vale cada color sin tener
+que memorizarlo. Los anillos se dibujan con el mismo truco sin
+ambigüedad ya usado para "Simon dice": un `Repeater` va pintando
+círculos completos de mayor a menor tamaño, cada uno encima del
+anterior — sin arcos ni recortes, cero riesgo de que salga mal sin
+poder verlo.
+
+**Sin límite de tiempo real**: la puntuación ("Puntos") es un total que
+se va sumando tiro tras tiro sin ningún reloj ni ronda — se puede
+tirar tantas veces como se quiera, sin ninguna prisa. El botón de
+recargar de la barra de abajo pone el total a cero para empezar una
+tanda nueva, guardando el récord (la tanda con más puntos conseguida
+nunca) igual que en las demás actividades de esta adaptación.
+
+**Puntuación a la derecha, diana a la izquierda**: la diana ocupa toda
+la zona izquierda/central disponible (lo más grande posible dado el
+hueco reservado a la derecha para "Puntos"/"Récord"), tal y como pidió
+el usuario explícitamente en vez del HUD arriba que usan las demás
+actividades.
+
+**Verificado**, con el mismo método de siempre más una comprobación
+extra posible esta vez: al guardar el icono del menú (`diana.svg`, la
+misma diana clásica en miniatura) y la pelota (`resource/ball.svg`, con
+sombreado 3D y sombra), el hook de este entorno los abrió solos en el
+panel del navegador y se pudieron ver ambos correctamente con una
+captura de pantalla real — segunda vez en esta adaptación (tras el
+icono de Simon) que se ha podido verificar algo visualmente. La lógica
+del juego (`diana.js`) se comprobó con `--launch diana` más un `Timer`
+de diagnóstico temporal: las 7 fronteras exactas entre franjas dieron
+la puntuación correcta (0/10/20/30/40/50 exactamente donde debían), la
+dispersión aleatoria se mantuvo dentro del límite esperado en 200
+pruebas, el bloqueo para no poder tirar dos pelotas a la vez mientras
+la anterior sigue "en el aire" funcionó, y reiniciar sesión puso el
+marcador a cero correctamente. `Timer` retirado después. Se añadió
+también `"diana-highscore"` al botón de "Reiniciar récords" en Ajustes.
+Ningún error de QML en ninguna comprobación.
+
+**Corrección importante tras aclarar el usuario cómo se usa de verdad**:
+"la pelota es real que les doy yo y ellos la tiran y el marco IR la
+detecta" — es decir, no es un juego de "toca la pantalla para simular
+un lanzamiento": es una pelota física de verdad, el cuidador se la da
+al abuelo, la tira contra la pantalla táctil, y el marco IR detecta el
+impacto real exactamente como si fuera un toque normal. Esto cambiaba
+dos cosas de fondo respecto a la primera versión:
+
+1. **Quitada la dispersión aleatoria** (`SCATTER_FACTOR`) que se había
+   añadido en la primera versión para que "no se acertara siempre
+   tocando el centro" — con una pelota de verdad esa imprecisión ya la
+   pone el propio lanzamiento físico; añadir encima una dispersión
+   inventada por software habría hecho que un acierto real en el centro
+   pudiera puntuar como si hubiera fallado, lo cual habría sido
+   confuso e injusto de cara al abuelo que sí acertó de verdad. Ahora
+   el punto de impacto que reporta el marco IR se usa tal cual, sin
+   modificarlo.
+2. **Zona de detección ampliada a toda la pantalla de juego** (antes
+   solo un margen alrededor de la diana): si la pelota real falla del
+   todo y golpea la pantalla lejos de la diana, debe registrarse igual
+   como fallo (0 puntos) en vez de no hacer nada, porque es un
+   lanzamiento real que de verdad ha pasado.
+
+También pidió "la diana en medio del todo": se cambió de estar anclada
+a la izquierda a quedar centrada en toda la pantalla de juego
+(`anchors.centerIn: playArea`), calculando su tamaño a partir de la
+altura disponible (la dimensión que manda en una pantalla apaisada) en
+vez de restarle el ancho del panel de puntuación — con una diana tan
+grande sigue sobrando margen de sobra a la derecha para "Puntos"/
+"Récord" sin necesidad de competir por el centrado.
+
+La marca visual que aparece al impactar dejó de simular "una pelota que
+llega volando" (crecía desde pequeña con un rebote `OutBack`) y pasó a
+ser un sello/marca instantánea justo en el punto de impacto real (un
+`Easing.OutQuad` rápido, sin crecer desde cero) — más honesto con lo
+que realmente pasa: la pelota YA ha llegado de verdad cuando el
+software se entera.
+
+**Verificado** con `--launch diana` más un `Timer` de diagnóstico
+temporal: el centro de la diana coincide con el centro de la pantalla
+de juego (930.68,407.68) frente a (931,408) — diferencia de redondeo
+insignificante —, sobra margen de sobra a la derecha (540px libres
+frente a 372px que necesita el panel de puntuación), un impacto
+simulado justo en el centro puntuó 50 como se esperaba, y un impacto
+simulado lejos de la diana (cerca de una esquina de la pantalla) se
+registró correctamente como fallo (0 puntos) en vez de ignorarse.
+`Timer` retirado después. Ningún error de QML en ninguna comprobación.

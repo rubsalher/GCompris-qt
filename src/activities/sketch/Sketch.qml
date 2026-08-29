@@ -5,16 +5,20 @@
  * SPDX-FileCopyrightText: 2019-2024 Timothée Giet <animtim@gmail.com>
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * Elderly-friendly build: this activity used to be a full mini image
+ * editor (several brush styles, geometric shapes, gradients, stamps,
+ * text, palette editing, save/load to file, background pictures...).
+ * At the user's request it was stripped down to just what a simple free
+ * drawing pad needs: a row of plain colors, a visible eraser, one
+ * thickness slider that resizes whichever of the two (pen or eraser) is
+ * currently active, undo/redo, and a clear (reload) button — all always
+ * visible in one toolbar, nothing hidden behind folding panels or menus.
  */
 
 import QtQuick
+import QtQuick.Controls.Basic
 import core 1.0
-
-// for Shapes
-import QtQuick.Shapes
-
-// for StandardPaths
-import QtCore
 
 import "../../core"
 import "sketch.js" as Activity
@@ -37,98 +41,54 @@ ActivityBase {
         signal stop
 
         Component.onCompleted: {
-            dialogActivityConfig.initialize()
             activity.start.connect(start);
             activity.stop.connect(stop);
         }
 
+        readonly property var basicColors: [
+            "#1a1a1a", // negro
+            "#e02020", // rojo
+            "#f2871f", // naranja
+            "#f2d31f", // amarillo
+            "#3fa63f", // verde
+            "#2e6fd9", // azul
+            "#8e44ad", // morado
+            "#8a5a3c", // marrón
+            "#e0629b"  // rosa
+        ]
+
         // Add here the QML items you need to access in javascript
         QtObject {
             id: items
-            property Item selectedTool: brushTool
-            property Item openPanel
-            readonly property bool isHorizontalLayout: activityBackground.width >= activityBackground.height
-            property int buttonSize
-            property real panelHandleWidth
-            property real panelHandleHeight
-            property int panelHandleRows: 2
-            property int panelHandleColumns: 2
-            property real panelGridY
+            readonly property Item selectedTool: brushTool
 
             property bool canvasLocked: true
             property bool toolStarted: false
-            property bool isSaved: true
             property bool resetRequested: false
-            property bool homeRequested: false
-            property color selectedForegroundColor: colorsPanel.selectedColor
+            property color selectedForegroundColor: activityBackground.basicColors[0]
             readonly property color foregroundColor: eraserMode ? backgroundColor : selectedForegroundColor
-            property color backgroundColor: Qt.rgba(1,1,1,1)
-            property color newBackgroundColor: backgroundColorSelector.newBackgroundColor
-            property string backgroundToLoad: ""
-            property color colorStop1
-            property color colorStop2
-            property real selectedAlpha: 0.5
+            readonly property color backgroundColor: Qt.rgba(1,1,1,1)
             property bool eraserMode: false
             property alias layoutArea: layoutArea
             property alias canvasArea: canvasArea
             property alias canvasColor: canvasColor
             property alias canvasImage: canvasImage
-            property alias loadedImage: loadedImage
             property alias tempCanvas: tempCanvas
             property alias outlineCursorRadius: outlineCursor.radius
             property alias scrollSound: scrollSound
-            property alias smudgeSound: smudgeSound
             property alias newImageDialog: newImageDialog
-            property alias creationHandler: creationHandler
             readonly property real devicePixelRatio: Screen.devicePixelRatio
-
-            readonly property var patternList: [
-                                        Qt.SolidPattern,
-                                        Qt.HorPattern,
-                                        Qt.VerPattern,
-                                        Qt.CrossPattern,
-                                        Qt.BDiagPattern,
-                                        Qt.FDiagPattern,
-                                        Qt.DiagCrossPattern,
-                                        Qt.Dense7Pattern,
-                                        Qt.Dense6Pattern,
-                                        Qt.Dense5Pattern,
-                                        Qt.Dense4Pattern,
-                                        Qt.Dense3Pattern,
-                                        Qt.Dense2Pattern,
-                                        Qt.Dense1Pattern
-                                    ]
-        }
-
-        function clearOpenPanels() {
-            // reset saved open panel to isOpen = false, as they close automatically on window size change.
-            if(items.openPanel) {
-                items.openPanel.forceClose();
-            }
-        }
-
-        onWidthChanged: {
-            clearOpenPanels();
-        }
-
-        onHeightChanged: {
-            clearOpenPanels();
         }
 
         onStart: {
             Activity.start(items);
-            // TODO: remove this and uncomment the properties in ovalShape and lineShape items after we set minimum Qt >= 6.6
-            if(ApplicationInfo.QTVersion.startsWith("6.5.") === false) {
-                ovalShape.preferredRendererType = Shape.CurveRenderer;
-                lineShape.preferredRendererType = Shape.CurveRenderer;
-            }
         }
         onStop: {
             processTimer.stop();
             Activity.stop();
         }
 
-        Keys.onEscapePressed: requestHome();
+        Keys.onEscapePressed: activity.home();
 
         Keys.onPressed: (event) => {
             if((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Z)) {
@@ -142,59 +102,317 @@ ActivityBase {
                     ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_N))) {
                 Activity.requestNewImage();
                 event.accepted = true;
-            } else if((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_S)) {
-                Activity.saveImageDialog();
-                event.accepted = true;
-            } else if((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_O)) {
-                Activity.openImageDialog();
-                event.accepted = true;
             } else if((event.modifiers === Qt.ControlModifier && event.key === Qt.Key_W)) {
-                requestHome();
+                activity.home();
                 event.accepted = true;
             }
         }
 
         Keys.onReleased: (event) => {
             if(event.key === Qt.Key_Back) {
-                requestHome();
+                activity.home();
                 event.accepted = true;
             }
         }
-
-        function requestHome() {
-            if(items.isSaved) {
-                activity.home();
-            } else {
-                items.homeRequested = true;
-                newImageDialog.active = true;
-            }
-        }
-
 
         GCSoundEffect {
             id: scrollSound
             source: "qrc:/gcompris/src/core/resource/sounds/scroll.wav"
         }
 
-        GCSoundEffect {
-            id: smudgeSound
-            source: "qrc:/gcompris/src/core/resource/sounds/smudge.wav"
+        // Toolbar: colors, eraser, thickness, undo/redo — everything always
+        // visible in one compact row, nothing folded away. The colors don't
+        // all have to fit on screen at once: they sit in a horizontally
+        // scrollable strip (drag the strip itself, or drag the little bar
+        // underneath it) so the toolbar stays a single row no matter how
+        // many colors there are.
+        Rectangle {
+            id: toolbar
+            anchors {
+                top: parent.top
+                left: parent.left
+                right: parent.right
+                margins: GCStyle.halfMargins
+            }
+            height: swatchSize + scrollBarHeight + GCStyle.baseMargins * 1.3
+            radius: GCStyle.halfMargins
+            color: GCStyle.darkBg
+            border.width: GCStyle.thinnestBorder
+            border.color: GCStyle.contentColor
+
+            readonly property real swatchSize: GCStyle.bigButtonHeight * 0.7
+            readonly property real scrollBarHeight: GCStyle.halfMargins * 0.7
+
+            // The brush only reads the current color/thickness/eraser mode
+            // once, when modeInit() runs — so without calling this again
+            // every time one of those changes, the toolbar's own look would
+            // update but drawing would silently keep using the old values.
+            function refreshBrush() {
+                if(tempCanvas.ctx) {
+                    brushTool.toolInit();
+                }
+            }
+
+            // Eraser, thickness, undo, redo: fixed-size controls, kept
+            // right-aligned so the colors strip on the left gets whatever
+            // width remains.
+            Row {
+                id: toolsRow
+                anchors {
+                    right: parent.right
+                    rightMargin: GCStyle.baseMargins * 0.6
+                    verticalCenter: parent.verticalCenter
+                }
+                spacing: GCStyle.halfMargins
+
+                Rectangle {
+                    id: eraserButton
+                    width: toolbar.swatchSize
+                    height: toolbar.swatchSize
+                    radius: GCStyle.halfMargins
+                    color: items.eraserMode ? GCStyle.highlightColor : "transparent"
+                    border.width: GCStyle.thinnestBorder
+                    border.color: GCStyle.contentColor
+                    scale: eraserPressArea.pressed ? 0.92 : 1
+                    Behavior on scale { NumberAnimation { duration: 80 } }
+
+                    Image {
+                        anchors.fill: parent
+                        anchors.margins: GCStyle.halfMargins * 0.5
+                        source: "qrc:/gcompris/src/activities/sketch/resource/eraserTools.svg"
+                        sourceSize.width: width
+                        sourceSize.height: height
+                        fillMode: Image.PreserveAspectFit
+                    }
+
+                    MouseArea {
+                        id: eraserPressArea
+                        anchors.fill: parent
+                        onClicked: {
+                            items.eraserMode = !items.eraserMode;
+                            toolbar.refreshBrush();
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: GCStyle.thinnestBorder * 2
+                    height: toolbar.swatchSize
+                    color: GCStyle.contentColor
+                    opacity: 0.5
+                }
+
+                Item {
+                    // NOTE: this outer plain Item (with no anchors of its own) is
+                    // required because Row positions its direct children by
+                    // setting their x/y itself — a direct child with its own
+                    // anchors conflicts with that and silently breaks the
+                    // Row's layout for every sibling, not just this one.
+                    // Anchoring the actual Column one level down, inside this
+                    // plain Item, sidesteps that entirely.
+                    width: 260 * ApplicationInfo.ratio
+                    height: toolbar.swatchSize
+
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width
+                        spacing: GCStyle.halfMargins * 0.3
+
+                        GCText {
+                            width: parent.width
+                            horizontalAlignment: Text.AlignHCenter
+                            color: GCStyle.whiteText
+                            fontSize: GCText.smallSize
+                            text: qsTr("Grosor")
+                        }
+
+                        GCSlider {
+                            id: thicknessSlider
+                            width: parent.width
+                            from: brushTool.roundBrush.minToolSize
+                            to: brushTool.roundBrush.maxToolSize
+                            stepSize: brushTool.roundBrush.sizeSliderStepSize
+                            value: brushTool.roundBrush.toolSize
+                            onValueChanged: {
+                                if(items.eraserMode) {
+                                    brushTool.roundBrush.eraserSize = value;
+                                } else {
+                                    brushTool.roundBrush.toolSize = value;
+                                }
+                                toolbar.refreshBrush();
+                            }
+
+                            Connections {
+                                target: items
+                                function onEraserModeChanged() {
+                                    thicknessSlider.value = items.eraserMode ? brushTool.roundBrush.eraserSize : brushTool.roundBrush.toolSize;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: GCStyle.thinnestBorder * 2
+                    height: toolbar.swatchSize
+                    color: GCStyle.contentColor
+                    opacity: 0.5
+                }
+
+                Image {
+                    id: undoButton
+                    source: "qrc:/gcompris/src/activities/sketch/resource/undo.svg"
+                    width: toolbar.swatchSize
+                    height: toolbar.swatchSize
+                    sourceSize.width: width
+                    sourceSize.height: height
+                    enabled: canvasArea.undoSize > 1
+                    opacity: enabled ? 1 : 0.5
+                    scale: undoPressArea.pressed ? 0.9 : 1
+                    Behavior on scale { NumberAnimation { duration: 80 } }
+
+                    MouseArea {
+                        id: undoPressArea
+                        anchors.fill: parent
+                        enabled: !items.canvasLocked
+                        onClicked: Activity.undoAction();
+                    }
+                }
+
+                Image {
+                    id: redoButton
+                    source: "qrc:/gcompris/src/activities/sketch/resource/undo.svg"
+                    mirror: true // mirrored undo image for redo
+                    width: toolbar.swatchSize
+                    height: toolbar.swatchSize
+                    sourceSize.width: width
+                    sourceSize.height: height
+                    enabled: canvasArea.redoSize > 0
+                    opacity: enabled ? 1 : 0.5
+                    scale: redoPressArea.pressed ? 0.9 : 1
+                    Behavior on scale { NumberAnimation { duration: 80 } }
+
+                    MouseArea {
+                        id: redoPressArea
+                        anchors.fill: parent
+                        enabled: !items.canvasLocked
+                        onClicked: Activity.redoAction();
+                    }
+                }
+            }
+
+            // Colors: a horizontally scrollable strip filling whatever
+            // width is left to the left of the fixed controls above.
+            Item {
+                id: colorsArea
+                anchors {
+                    left: parent.left
+                    leftMargin: GCStyle.baseMargins * 0.6
+                    right: toolsRow.left
+                    rightMargin: GCStyle.baseMargins * 0.6
+                    verticalCenter: parent.verticalCenter
+                }
+                height: toolbar.swatchSize + toolbar.scrollBarHeight + GCStyle.halfMargins * 0.3
+
+                Flickable {
+                    id: colorsFlick
+                    anchors {
+                        top: parent.top
+                        left: parent.left
+                        right: parent.right
+                    }
+                    height: toolbar.swatchSize
+                    contentWidth: colorsRow.width
+                    contentHeight: height
+                    flickableDirection: Flickable.HorizontalFlick
+                    boundsBehavior: Flickable.StopAtBounds
+                    clip: true
+
+                    Row {
+                        id: colorsRow
+                        spacing: GCStyle.halfMargins
+
+                        Repeater {
+                            model: activityBackground.basicColors
+
+                            delegate: Rectangle {
+                                id: colorSwatch
+                                required property string modelData
+                                readonly property bool isSelected: !items.eraserMode && items.selectedForegroundColor.toString() === modelData
+                                width: toolbar.swatchSize
+                                height: toolbar.swatchSize
+                                radius: width * 0.5
+                                color: modelData
+                                border.width: isSelected ? GCStyle.thinBorder * 1.4 : GCStyle.thinnestBorder
+                                border.color: isSelected ? GCStyle.highlightColor : GCStyle.contentColor
+                                scale: pressArea.pressed ? 0.92 : 1
+                                Behavior on scale { NumberAnimation { duration: 80 } }
+
+                                MouseArea {
+                                    id: pressArea
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        items.selectedForegroundColor = colorSwatch.modelData;
+                                        items.eraserMode = false;
+                                        toolbar.refreshBrush();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Draggable scroll handle under the strip — shown only when
+                // there are more colors than fit at once.
+                ScrollBar {
+                    id: colorsScrollBar
+                    anchors {
+                        top: colorsFlick.bottom
+                        topMargin: GCStyle.halfMargins * 0.3
+                        left: colorsFlick.left
+                        right: colorsFlick.right
+                    }
+                    height: toolbar.scrollBarHeight
+                    orientation: Qt.Horizontal
+                    policy: colorsRow.width > colorsFlick.width ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+                    size: colorsFlick.visibleArea.widthRatio
+                    position: colorsFlick.visibleArea.xPosition
+                    onPositionChanged: {
+                        if(pressed) {
+                            colorsFlick.contentX = position * colorsFlick.contentWidth;
+                        }
+                    }
+
+                    contentItem: Rectangle {
+                        implicitHeight: colorsScrollBar.height
+                        radius: height * 0.5
+                        color: GCStyle.highlightColor
+                    }
+                    background: Rectangle {
+                        implicitHeight: colorsScrollBar.height
+                        radius: height * 0.5
+                        color: GCStyle.contentColor
+                        opacity: 0.35
+                    }
+                }
+            }
         }
 
         Item {
             id: layoutArea
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.bottomMargin: bar.height * 1.2 + GCStyle.halfMargins
-            anchors.leftMargin: GCStyle.halfMargins
+            anchors {
+                top: toolbar.bottom
+                bottom: bar.top
+                left: parent.left
+                right: parent.right
+                margins: GCStyle.halfMargins
+            }
         }
 
         GImageGrabber {
             id: canvasArea
             anchors.centerIn: layoutArea
             maxUndo: activity.undoSetting
-
-            property url tempSaveFile: StandardPaths.writableLocation(StandardPaths.TempLocation) + "/GCSketchSave.png"
 
             function init() {
                 canvasInput.resetPoints();
@@ -213,17 +431,6 @@ ActivityBase {
             Rectangle {
                 id: canvasColor
                 anchors.fill: parent
-            }
-
-            // Used to load background or saved image with size set to fit the canvas
-            Image {
-                id: loadedImage
-                anchors.fill: parent
-                fillMode: Image.PreserveAspectFit
-                cache: false
-                smooth: true
-                source: ""
-                visible: false
             }
 
             // The QML Canvas has lots of issues when deviceRatio != 1, especially it can't load images at real pixel size, only device pixel size.
@@ -254,18 +461,10 @@ ActivityBase {
                     ctx = getContext("2d");
                 }
 
-                // After loading canvas result to image, clear Canvas and hide other drawing sources
+                // After loading canvas result to image, clear Canvas
                 function clearTempCanvas() {
                     tempCanvas.ctx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
                     tempCanvas.requestPaint();
-                    loadedImage.visible = false;
-                    geometryShape.visible = false;
-                    ovalShape.visible = false;
-                    lineShape.visible = false;
-                    gradientShape.visible = false;
-                    gradientShapePath.fillGradient = null;
-                    stampImage.visible = false;
-                    textShape.visible = false;
                     items.canvasLocked = false;
                 }
 
@@ -277,7 +476,7 @@ ActivityBase {
                 MouseArea {
                     id: canvasInput
                     anchors.fill: parent
-                    enabled: items.openPanel == null && !items.canvasLocked
+                    enabled: !items.canvasLocked
                     hoverEnabled: true
 
                     property var lastPoint
@@ -293,7 +492,6 @@ ActivityBase {
                     }
 
                     onPressed: {
-                        items.isSaved = false;
                         items.selectedTool.toolStart();
                         items.toolStarted = true;
                     }
@@ -319,150 +517,6 @@ ActivityBase {
                         items.selectedTool.toolProcess();
                     }
                 }
-
-                Image {
-                    id: stampImage
-                    visible: false
-                    x: 0
-                    y: 0
-                    width: 0
-                    height: width
-                    sourceSize.width: width
-                    sourceSize.height: width
-                    fillMode: Image.PreserveAspectFit
-                }
-
-                Rectangle {
-                    id: geometryShape
-                    visible: false
-                    x: 0
-                    y: 0
-                    width: 0
-                    height: 0
-                    color: items.selectedForegroundColor
-                }
-
-                RadialGradient {
-                    id: radialGradientFill
-                    centerX: 0
-                    centerY: 0
-                    focalX: centerX
-                    focalY: centerY
-                    centerRadius: 1
-                    focalRadius: 1
-                    property bool isInverted: false
-                    GradientStop { position: 0; color: radialGradientFill.isInverted ? items.colorStop2 : items.colorStop1 }
-                    GradientStop { position: 1; color: radialGradientFill.isInverted ? items.colorStop1 : items.colorStop2 }
-                }
-
-                LinearGradient {
-                    id: linearGradientFill
-                    x1: 0
-                    y1: 0
-                    x2: 0
-                    y2: 0
-                    GradientStop { position: 0; color: items.colorStop1 }
-                    GradientStop { position: 1; color: items.colorStop2 }
-                }
-
-                Shape {
-                    id: gradientShape
-                    visible: false
-                    z: -1
-                    x: 0
-                    y: 0
-                    width: tempCanvas.width
-                    height: tempCanvas.height
-
-                    ShapePath {
-                        id: gradientShapePath
-                        startX: 0
-                        startY: 0
-                        strokeWidth: -1
-                        fillGradient: null
-                        PathLine { x: gradientShape.width; y: 0 }
-                        PathLine { x: gradientShape.width; y: gradientShape.height }
-                        PathLine { x: 0 ; y: gradientShape.height }
-                        PathLine { x: 0 ; y: 0 }
-                    }
-                }
-
-                Shape {
-                    id: ovalShape
-                    visible: false
-                    x: 0
-                    y: 0
-                    width: 0
-                    height: 0
-                    // TODO: uncomment this and update the start function once we set minimum Qt version required >= 6.6
-                    // This property is not available on Qt 6.5, so for now we set it conditionally in the start function.
-                    // preferredRendererType: Shape.CurveRenderer
-                    onVisibleChanged: {
-                        if(!visible) {
-                            x = y = width = height =0
-                        }
-                    }
-                    ShapePath {
-                        id: ovalShapePath
-                        fillColor: items.selectedForegroundColor
-                        strokeWidth: -1
-                        startX: ovalShape.width * 0.5
-                        startY: 0
-                        PathArc {
-                            x: ovalShape.width * 0.5
-                            y: ovalShape.height
-                            radiusX: ovalShape.width * 0.5
-                            radiusY: ovalShape.height * 0.5
-                            useLargeArc: true
-                        }
-                        PathArc {
-                            x: ovalShape.width * 0.5
-                            y: 0
-                            radiusX: ovalShape.width * 0.5
-                            radiusY: ovalShape.height * 0.5
-                            useLargeArc: true
-                        }
-                    }
-                }
-
-
-                Shape {
-                    id: lineShape
-                    visible: false
-                    x: 0
-                    y: 0
-                    width: parent.width
-                    height: parent.height
-                    // TODO: see comment in ovalShape...
-                    // preferredRendererType: Shape.CurveRenderer
-                    ShapePath {
-                        id: lineShapePath
-                        capStyle: ShapePath.RoundCap
-                        strokeWidth: -1
-                        strokeColor: items.selectedForegroundColor
-                        startX: 0
-                        startY: 0
-                        PathLine {
-                            id: lineShapeEnd
-                            x: 0
-                            y: 0
-                        }
-                    }
-                }
-
-                GCText {
-                    id: textShape
-                    visible: false
-                    x: 0
-                    y: 0
-                    width: parent.width
-                    height: parent.height
-                    color: items.selectedForegroundColor
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: ""
-                }
-
             }
         }
 
@@ -488,191 +542,8 @@ ActivityBase {
             }
         }
 
-        // All tools, one Item for each
-        BrushTool{
+        BrushTool {
             id: brushTool
-        }
-
-        GeometryTool {
-            id: geometryTool
-        }
-
-        GradientTool {
-            id: gradientTool
-        }
-
-        StampTool {
-            id: stampTool
-        }
-
-        TextTool {
-            id: textTool
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            enabled: items.openPanel!= null
-            onClicked: {
-                items.openPanel.toggleOpen();
-            }
-        }
-
-        // All 3 foldable panels
-        FilesPanel {
-            id: filesPanel
-        }
-
-        ToolsPanel {
-            id: toolsPanel
-        }
-
-        ColorsPanel {
-            id: colorsPanel
-        }
-
-        Rectangle {
-            id: undoPanel
-            radius: GCStyle.halfMargins
-            color: GCStyle.darkBg
-            height: items.panelHandleHeight
-            border.color: GCStyle.contentColor
-            anchors.right: activityBackground.right
-            anchors.margins: -GCStyle.halfMargins
-
-            Grid {
-                id: undoRedoGrid
-                x: GCStyle.halfMargins
-                y: items.panelGridY
-                spacing: GCStyle.halfMargins
-                columns: items.panelHandleColumns
-                rows: items.panelHandleRows
-
-                Image {
-                    id: undo
-                    source: "qrc:/gcompris/src/activities/sketch/resource/undo.svg"
-                    height: items.buttonSize
-                    width: items.buttonSize
-                    sourceSize.width: items.buttonSize
-                    sourceSize.height: items.buttonSize
-                    enabled: canvasArea.undoSize > 1
-                    opacity: enabled ? 1 : 0.5
-                    MouseArea {
-                        anchors.fill: parent
-                        enabled: !items.canvasLocked
-                        onPressed: parent.scale = 0.9
-                        onReleased: parent.scale = 1
-                        onClicked: {
-                            Activity.undoAction();
-                        }
-                    }
-                }
-
-                Image {
-                    id: redo
-                    source: "qrc:/gcompris/src/activities/sketch/resource/undo.svg"
-                    mirror: true // mirrored undo image for redo
-                    height: items.buttonSize
-                    width: items.buttonSize
-                    sourceSize.width: items.buttonSize
-                    sourceSize.height: items.buttonSize
-                    enabled: canvasArea.redoSize > 0
-                    opacity: enabled ? 1 : 0.5
-                    MouseArea {
-                        anchors.fill: parent
-                        enabled: !items.canvasLocked
-                        onPressed: parent.scale = 0.9
-                        onReleased: parent.scale = 1
-                        onClicked: {
-                            Activity.redoAction();
-                        }
-                    }
-                }
-            }
-        }
-
-        states: [
-            State {
-                name: "horizontalLayout"
-                when: items.isHorizontalLayout
-
-                PropertyChanges {
-                    items.buttonSize: Math.min(((activityBackground.height - bar.height * 1.2) - 15 * GCStyle.halfMargins) * 0.125, 50 * ApplicationInfo.ratio)
-                    items.panelHandleWidth: items.buttonSize + GCStyle.halfMargins * 3
-                    items.panelHandleHeight: items.buttonSize * 2 + GCStyle.halfMargins * 3
-                    items.panelHandleColumns: 1
-                    items.panelHandleRows: 2
-                    items.panelGridY: GCStyle.halfMargins
-
-                    layoutArea.anchors.topMargin: GCStyle.halfMargins
-                    layoutArea.anchors.rightMargin: items.buttonSize + GCStyle.halfMargins * 3
-
-                    toolsPanel.handleOffset: items.panelHandleHeight + GCStyle.halfMargins
-                    colorsPanel.handleOffset: (items.panelHandleHeight + GCStyle.halfMargins) * 2
-                    undoPanel.y: items.panelHandleHeight * 3 + GCStyle.halfMargins * 3
-                    undoPanel.width: items.panelHandleWidth
-                }
-                AnchorChanges {
-                    target: layoutArea
-                    anchors.top: parent.top
-                    anchors.right: parent.right
-                }
-            },
-            State {
-                name: "verticalLayout"
-                when: !items.isHorizontalLayout
-
-                PropertyChanges {
-                    items.buttonSize: Math.min((activityBackground.width - 15 * GCStyle.halfMargins) * 0.125, 50 * ApplicationInfo.ratio)
-                    items.panelHandleWidth: items.buttonSize * 2 + GCStyle.halfMargins * 3
-                    items.panelHandleHeight: items.buttonSize + GCStyle.halfMargins * 3
-                    items.panelHandleRows: 1
-                    items.panelHandleColumns: 2
-                    items.panelGridY: GCStyle.halfMargins * 2
-
-                    layoutArea.anchors.topMargin: items.buttonSize + GCStyle.halfMargins * 3
-                    layoutArea.anchors.rightMargin: GCStyle.halfMargins
-
-                    toolsPanel.handleOffset: items.panelHandleWidth + GCStyle.halfMargins
-                    colorsPanel.handleOffset: (items.panelHandleWidth + GCStyle.halfMargins) * 2
-                    undoPanel.y: -GCStyle.halfMargins
-                    undoPanel.width: items.panelHandleWidth + GCStyle.halfMargins
-                }
-                AnchorChanges {
-                    target: layoutArea
-                    anchors.top: parent.top
-                    anchors.right: parent.right
-                }
-            }
-
-        ]
-
-        GCCreationHandler {
-            id: creationHandler
-            imageMode: true
-            fileExtensions: ["*.svg", "*.png", "*.jpg", "*.jpeg", "*.webp"]
-            onSaved: {
-                items.isSaved = true;
-            }
-            onFileLoaded: (data, filePath) => {
-                Activity.imageToLoad = filePath;
-                Activity.requestNewImage();
-            }
-            onClose: {
-                filesPanel.forceClose();
-                activity.focus = true;
-            }
-        }
-
-        BackgroundSelector {
-            id: backgroundSelector
-            visible: false
-            onClose: home();
-        }
-
-        BackgroundColorSelector {
-            id: backgroundColorSelector
-            visible: false
-            onClose: home();
         }
 
         Loader {
@@ -680,36 +551,16 @@ ActivityBase {
             sourceComponent: GCDialog {
                 parent: activity
                 isDestructible: false
-                message: items.homeRequested ?
-                    qsTr("You did not save this image. Do you want to close this activity?") :
-                    qsTr("Do you want to erase this image?")
-                button1Text: qsTr("Yes")
+                message: qsTr("¿Quieres borrar el dibujo?")
+                button1Text: qsTr("Sí")
                 button2Text: qsTr("No")
                 onClose: {
                     newImageDialog.active = false;
-                    items.homeRequested = false;
                     items.resetRequested = false;
                 }
-
-                property bool yesPressed: false
-
                 onButton1Hit: {
-                    yesPressed = true;
-                    if(items.homeRequested) {
-                        return;
-                    } else if(items.resetRequested) {
+                    if(items.resetRequested) {
                         Activity.resetLevel();
-                    } else {
-                        Activity.newImage();
-                    }
-                }
-                onButton2Hit: {
-                    yesPressed = false;
-                    Activity.imageToLoad = "";
-                }
-                onDeferredAction: {
-                    if(items.homeRequested && yesPressed) {
-                        activity.home();
                     }
                 }
             }
@@ -719,43 +570,22 @@ ActivityBase {
             onStatusChanged: if(status == Loader.Ready) item.start();
         }
 
-        DialogChooseLevel {
-            id: dialogActivityConfig
-            currentActivity: activity.activityInfo
-            onClose: {
-                activity.home()
-            }
-            onLoadData: {
-                if(activityData && activityData["undoSetting"]) {
-                    activity.undoSetting = activityData["undoSetting"];
-                }
-            }
-        }
-
         DialogHelp {
             id: dialogHelp
-            onClose: home();
+            onClose: activity.home();
         }
 
         Bar {
             id: bar
-            content: BarEnumContent { value: help | home | reload | activityConfig }
+            content: BarEnumContent { value: help | home | reload }
             onHelpClicked: {
                 displayDialog(dialogHelp);
             }
             onHomeClicked: {
-                activityBackground.requestHome();
+                activity.home();
             }
             onReloadClicked: {
-                if(items.isSaved) {
-                    Activity.resetLevel();
-                } else {
-                    items.resetRequested = true;
-                    newImageDialog.active = true;
-                }
-            }
-            onActivityConfigClicked: {
-                activity.displayDialog(dialogActivityConfig)
+                Activity.requestNewImage();
             }
         }
     }

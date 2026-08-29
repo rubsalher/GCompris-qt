@@ -9,63 +9,13 @@
 .import QtQuick as Quick
 .import core 1.0 as GCompris
 
-var url = "qrc:/gcompris/src/activities/sketch/resource/";
 var items;
-var currentLevel = 0;
 
 var canvasWidth = 1;
 var canvasHeight = 1;
 
-var backgroundImageSet = [
-    "qrc:/gcompris/src/core/resource/cancel_white.svg",
-    "qrc:/gcompris/src/activities/photo_hunter/resource/photo1.svg",
-    "qrc:/gcompris/src/activities/photo_hunter/resource/photo2.svg",
-    "qrc:/gcompris/src/activities/photo_hunter/resource/photo3.svg",
-    "qrc:/gcompris/src/activities/photo_hunter/resource/photo4.svg",
-    "qrc:/gcompris/src/activities/photo_hunter/resource/photo5.svg",
-    "qrc:/gcompris/src/activities/photo_hunter/resource/photo6.svg",
-    "qrc:/gcompris/src/activities/photo_hunter/resource/photo7.svg",
-    "qrc:/gcompris/src/activities/photo_hunter/resource/photo8.svg",
-    "qrc:/gcompris/src/activities/photo_hunter/resource/photo9.svg",
-    "qrc:/gcompris/src/activities/photo_hunter/resource/photo10.svg",
-    "qrc:/gcompris/src/activities/algebra_by/resource/background.svg",
-    "qrc:/gcompris/src/activities/align4_2players/resource/background.svg",
-    "qrc:/gcompris/src/activities/bargame/resource/background.svg",
-    "qrc:/gcompris/src/activities/braille_alphabets/resource/background.svg",
-    "qrc:/gcompris/src/activities/categorization/resource/background.svg",
-    "qrc:/gcompris/src/activities/click_on_letter/resource/background.svg",
-    "qrc:/gcompris/src/activities/color_mix/resource/background.svg",
-    "qrc:/gcompris/src/activities/colors/resource/background.svg",
-    "qrc:/gcompris/src/activities/crane/resource/background.svg",
-    "qrc:/gcompris/src/activities/enumerate/resource/background.svg",
-    "qrc:/gcompris/src/activities/family/resource/background.svg",
-    "qrc:/gcompris/src/activities/followline/resource/background.svg",
-    "qrc:/gcompris/src/activities/football/resource/background.svg",
-    "qrc:/gcompris/src/activities/gletters/resource/background.svg",
-    "qrc:/gcompris/src/activities/hangman/resource/background.svg",
-    "qrc:/gcompris/src/activities/hanoi_real/resource/background.svg",
-    "qrc:/gcompris/src/activities/instruments/resource/background.svg",
-    "qrc:/gcompris/src/activities/land_safe/resource/background.svg",
-    "qrc:/gcompris/src/activities/magic-hat-minus/resource/background.svg",
-    "qrc:/gcompris/src/activities/menu/resource/background.svg",
-    "qrc:/gcompris/src/activities/missing-letter/resource/background.svg",
-    "qrc:/gcompris/src/activities/mosaic/resource/background.svg",
-    "qrc:/gcompris/src/activities/redraw/resource/background.svg",
-    "qrc:/gcompris/src/activities/scalesboard/resource/background.svg",
-    "qrc:/gcompris/src/activities/smallnumbers/resource/background.svg",
-    "qrc:/gcompris/src/activities/smallnumbers2/resource/background.svg",
-    "qrc:/gcompris/src/activities/submarine/resource/background.svg",
-    "qrc:/gcompris/src/activities/sudoku/resource/background.svg",
-    "qrc:/gcompris/src/activities/tic_tac_toe/resource/background.svg",
-    "qrc:/gcompris/src/activities/wordsgame/resource/background.svg",
-    "qrc:/gcompris/src/activities/color_mix/resource/background2.svg"
-    ];
-
-var imageToLoad = "";
-
 function start(items_) {
     items = items_;
-    currentLevel = 0;
     initLevel();
 }
 
@@ -79,14 +29,11 @@ function initLevel() {
     items.canvasArea.clearRedo();
     initCanvas();
     items.canvasArea.init();
-    items.isSaved = true;
     items.canvasLocked = false;
 }
 
 function resetLevel() {
     items.resetRequested = false;
-    items.backgroundColor = Qt.rgba(1,1,1,1);
-    items.backgroundToLoad = "";
     initLevel();
 }
 
@@ -125,49 +72,7 @@ function redoAction() {
     }
 }
 
-function loadImage() {
-    items.canvasImage.source = "";
-    items.loadedImage.sourceSize.width = undefined;
-    items.loadedImage.sourceSize.height = undefined;
-    items.loadedImage.source = imageToLoad;
-    imageToLoad = "";
-    items.loadedImage.visible = true;
-    initLevel();
-}
-
-function loadBackground() {
-    items.canvasImage.source = "";
-    items.loadedImage.sourceSize.width = items.loadedImage.width;
-    items.loadedImage.sourceSize.height = items.loadedImage.height;
-    items.loadedImage.source = items.backgroundToLoad;
-    items.loadedImage.visible = true;
-    initLevel();
-}
-
 function requestNewImage() {
-    if(items.isSaved) {
-        newImage();
-    } else {
-        items.newImageDialog.active = true;
-    }
-}
-
-function newImage() {
-    items.backgroundColor = items.newBackgroundColor;
-    if(imageToLoad != "") {
-        loadImage();
-    } else if(items.backgroundToLoad != "") {
-        loadBackground();
-    } else {
-        initLevel();
-    }
-}
-
-function saveImageDialog() {
-    items.canvasArea.saveToFile(items.canvasArea.tempSaveFile);
-    items.creationHandler.saveWindow(items.canvasArea.tempSaveFile);
-}
-
-function openImageDialog() {
-    items.creationHandler.loadWindow();
+    items.resetRequested = true;
+    items.newImageDialog.active = true;
 }
