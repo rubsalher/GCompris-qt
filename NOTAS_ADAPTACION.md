@@ -2005,3 +2005,161 @@ simulado justo en el centro puntuó 50 como se esperaba, y un impacto
 simulado lejos de la diana (cerca de una esquina de la pantalla) se
 registró correctamente como fallo (0 puntos) en vez de ignorarse.
 `Timer` retirado después. Ningún error de QML en ninguna comprobación.
+
+## Fase 19 — Ajustes visuales de "Simon dice" (hecho)
+
+Petición, con foto del centro de la diana: "Quita estas letras donde
+pone simon dice y cuando se ilumine 1 haz que brille mas".
+
+- **Quitado el texto "SIMON DICE"** del centro del tablero — solo queda
+  el número de ronda actual, ahora más grande (`hugeSize * 1.4`) ya que
+  tiene todo el círculo central para él solo.
+- **Los colores brillan más al encenderse**, con dos efectos que se
+  suman al simple cambio de color que ya había:
+  1. Un destello blanco semitransparente (opacidad 0.5) superpuesto
+     encima del color de cada casilla mientras está encendida — se
+     nota mucho más que un color ligeramente distinto.
+  2. El borde del aro negro exterior (el bisel decorativo alrededor de
+     las 4 casillas) se ilumina con el MISMO color que la casilla
+     encendida en ese momento — da sensación de que la luz "se
+     desborda" un poco más allá de la propia casilla, en vez de quedar
+     encerrada dentro de su cuarto de círculo.
+
+**Verificado** con `--launch simon` más un `Timer` de diagnóstico
+temporal que forzó `items.litPad` a un valor conocido (rojo) y
+comprobó, DESPUÉS de esperar a que terminara la animación de 80ms (los
+cambios de borde/opacidad usan `Behavior`, así que leerlos en el mismo
+instante habría dado el valor antiguo, no el nuevo) — el borde exterior
+pasó correctamente de ancho 0 a ancho 17.4 con el color rojo exacto de
+esa casilla, y volvió a 0 al apagarse. Ningún error de QML en ninguna
+comprobación.
+
+## Fase 20 — Diana: turnos de 3 tiros, espera de 5 segundos, quitado el récord (hecho)
+
+Petición, con foto del badge "Récord": "haz que despues de un tiro
+tarde 5 seg en poder hacer otro pon que 1 turno sean 3 lanzamientos y
+quita el record de ese juego que no sirve".
+
+- **Espera obligatoria de 5 segundos entre tiros**: no contradice el
+  "sin límite de tiempo" pedido en la Fase 18 — aquella petición era
+  sobre no meter prisa para DECIDIR cuándo tirar (pensar todo el tiempo
+  que haga falta antes del lanzamiento); esta espera es DESPUÉS de
+  tirar, mientras alguien va a buscar la pelota real y la trae de
+  vuelta — encaja con el propio uso físico del juego, no lo contradice.
+- **Un turno son 3 tiros**: al completar el tercero aparece una
+  pantalla de "¡Turno terminado!" con los puntos conseguidos y un botón
+  "Nuevo turno" — no hay ninguna cuenta atrás forzando a empezar el
+  turno siguiente, se empieza cuando se quiera tocando el botón.
+- **Quitado el récord** por completo: ya no tiene sentido con turnos de
+  3 tiros en vez de una sesión libre — se quitó la property
+  `highScore`, la carga/guardado en `ApplicationSettings`
+  (`"diana-highscore"`), el badge correspondiente, y esa misma clave
+  del botón de "Reiniciar récords" en Ajustes. El panel de la derecha
+  ahora muestra los puntos del turno actual y "Tiro X de 3"; mientras
+  dura la espera de 5 segundos aparece además un aviso "Espera Xs…"
+  bajo esos datos.
+
+**Error real encontrado y corregido durante la propia verificación**:
+al reescribir el fichero para quitar la carga del récord, se borró por
+error el `Component.onCompleted` ENTERO — que además de cargar el
+récord (ya no necesario) también conectaba las señales `activity.start`/
+`activity.stop` a las señales locales `start`/`stop` de las que dependen
+TODOS los `onStart:`/`onStop:` de la actividad. Sin esa conexión, el
+juego nunca llegaba a arrancar de verdad (`Activity.start()` nunca se
+llamaba), y cualquier intento de tirar daba un `TypeError` real
+(`Cannot read property 'locked' of undefined`) porque la variable
+interna `items` del `.js` nunca se llegaba a inicializar. Se detectó
+exactamente porque el primer intento de comprobación con el `Timer` de
+diagnóstico falló con ese error en el log — recordatorio de que, al
+quitar código de un bloque, hay que revisar si ese bloque hacía ALGO
+MÁS aparte de lo que se quería quitar. Se corrigió dejando el
+`Component.onCompleted` solo con la conexión de señales.
+
+**Verificado** con `--launch diana` más un `Timer` de diagnóstico
+temporal (tras corregir el error de arriba): tiro 1 en el centro dio 50
+puntos y bloqueó nuevos tiros; un segundo tiro mientras seguía
+bloqueado se rechazó correctamente; `throwFinished()` inició la cuenta
+atrás en 5; forzando 5 "ticks" de la cuenta atrás (sin esperar 5
+segundos reales) el bloqueo se liberó exactamente como se esperaba;
+tiro 2 en el anillo de 20 puntos sumó bien (70 en total); tiro 3
+(fallo deliberado, 0 puntos) completó el turno (`turnComplete=true`,
+70 puntos finales); un cuarto intento de tiro tras terminar el turno se
+rechazó; y `Activity.newTurn()` reinició todo correctamente. También se
+relanzó el menú principal entero para confirmar que no se rompió nada
+más. Ningún error de QML en ninguna comprobación final.
+
+## Fase 21 — Quitado el brillo del aro exterior de Simon, número más grande, y menú sin estrellitas (hecho)
+
+Petición, con foto del centro de Simon (número "3") y foto de una tira
+de casillas del menú con estrellitas y una insignia en forma de sol:
+"Quita que se ilumine el aro de fuera porque despista y haz los
+numeros mas grandes. Y quita las estrelitas de los juegos del menu".
+
+- **Quitado el brillo del aro exterior** de Simon dice — el borde que
+  se iluminaba del color de la casilla encendida (añadido en la Fase
+  19) se ha revertido a un aro negro fijo, sin animación. Se mantiene
+  el destello blanco sobre la propia casilla encendida, que no se
+  quejó de ese.
+- **Número central más grande**: en vez de un tamaño fijo
+  (`hugeSize * 1.4`), ahora usa `fontSizeMode: Text.Fit` dentro de una
+  caja del 80% del círculo central (ancho y alto) con un tamaño de
+  partida enorme (`hugeSize * 3`) — así ocupa siempre el máximo posible
+  dentro del círculo, sea el número de 1 o de 2 cifras, sin necesidad
+  de ajustar el multiplicador a mano.
+- **Quitadas las estrellitas y demás insignias de las casillas del
+  menú**: las dos fotos del segundo mensaje mostraban, en cada casilla,
+  una estrellita de dificultad (arriba a la izquierda del icono) y una
+  insignia en forma de sol/estrella de favorito (arriba a la derecha,
+  visible porque `sectionVisible=true` en los ajustes). Ninguna de las
+  dos tenía ya sentido en esta adaptación: la dificultad no aporta nada
+  cuando el menú es una lista ya fija y elegida a mano, y marcar
+  favoritos tampoco sirve de nada desde que la barra de categorías
+  (donde estaría la pestaña de favoritos) está permanentemente oculta.
+  Se quitaron del todo: los 3 iconos de dificultad mínima/máxima con su
+  separador, la insignia de "actividad nueva", y el icono+`MouseArea`
+  de marcar/desmarcar favorito — cada casilla del menú ahora muestra
+  solo el icono del juego y su título, sin nada más encima.
+
+**Verificado** con `--launch simon` y con el menú principal completo
+(`--window` sin `--launch`), ambos sin errores de QML. El
+`fontSizeMode: Text.Fit` del número es un patrón ya usado con
+confianza en el resto del proyecto (título de las casillas del menú,
+textos de aviso, etc.), así que no hizo falta un diagnóstico aparte
+para confirmar que funciona.
+
+## Fase 22: Aplastatopos, rebajar la rampa de dificultad
+
+Petición: "Haz que en el juego de los topos no suba tanto la velocidad
+porque los abuelos no podran darle." La dificultad progresiva de
+`aplastatopos.js` (a lo largo de los 60s de la ronda) subía demasiado:
+
+- El hueco entre topos bajaba de 1300ms a 500ms (más del doble de
+  rápido al final).
+- El tiempo que cada topo quedaba arriba bajaba de 1700ms a solo
+  800ms, insuficiente para localizarlo y golpearlo con reflejos de
+  persona mayor.
+- La probabilidad de que salieran dos topos a la vez subía hasta el
+  35% cerca del final, lo que obliga a repartir la atención entre dos
+  agujeros.
+
+Se ha suavizado la rampa en las tres variables (`scheduleNextMole()` y
+`spawnMole()` en `src/activities/aplastatopos/aplastatopos.js`), de
+forma que el juego se sigue poniendo un poco más difícil según avanza
+la ronda, pero sin llegar a un ritmo excesivo:
+
+- Hueco entre topos: de 1300ms a 1000ms (antes 500ms).
+- Topo arriba: de 1700ms a 1300ms (antes 800ms).
+- Probabilidad de doble topo: de 0% a 15% (antes 35%).
+
+**Nota de compilación**: en este equipo, tras reiniciar la sesión,
+`cmake` y las herramientas de `gettext` (`msgattrib`, usadas solo para
+regenerar las traducciones `.qm`) habían dejado de estar en el `PATH`
+del shell. `cmake` se soluciona añadiendo `C:\Qt\Tools\CMake_64\bin` al
+`PATH` de la sesión de turno. Para `msgattrib` (target por defecto
+`all`) no hizo falta arreglarlo: alcanza con compilar el target
+`binaries` (`cmake --build . --target binaries -j 8`) en vez de `all`,
+que reconstruye el ejecutable y los `.rcc` de las actividades sin tocar
+las traducciones.
+
+**Verificado** con `--launch aplastatopos --window --software-renderer`,
+sin errores de QML/JS (solo el ruido de arranque ya conocido).

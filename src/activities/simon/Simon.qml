@@ -68,6 +68,7 @@ ActivityBase {
         onStart: Activity.start(activity, items)
         onStop: Activity.stop()
 
+
         GCSoundEffect {
             id: toneGreenSound
             source: "qrc:/gcompris/src/activities/simon/resource/tone_green.wav"
@@ -139,8 +140,11 @@ ActivityBase {
             readonly property real circleSize: Math.min(width, height) * 0.92
 
             // The outer dark rim, purely decorative (matches the real toy's
-            // black bezel around the 4 colored pads).
+            // black bezel around the 4 colored pads) — plain and static,
+            // it doesn't light up itself (that turned out distracting);
+            // the shine stays on the pad that's actually lit.
             Rectangle {
+                id: outerRim
                 anchors.centerIn: parent
                 width: playArea.circleSize + GCStyle.baseMargins
                 height: width
@@ -192,6 +196,20 @@ ActivityBase {
                             Behavior on color { ColorAnimation { duration: 80 } }
                         }
 
+                        // A bright white flash layered on top while this
+                        // pad is lit, so it visibly shines rather than just
+                        // swapping to a slightly different color.
+                        Rectangle {
+                            x: -padTile.modelData.tx
+                            y: -padTile.modelData.ty
+                            width: padCircle.width
+                            height: padCircle.width
+                            radius: width * 0.5
+                            color: "#ffffff"
+                            opacity: items.litPad === padTile.modelData.index ? 0.5 : 0
+                            Behavior on opacity { NumberAnimation { duration: 80 } }
+                        }
+
                         MouseArea {
                             anchors.fill: parent
                             onClicked: Activity.padPressed(padTile.modelData.index)
@@ -210,28 +228,18 @@ ActivityBase {
                 border.width: GCStyle.thinBorder
                 border.color: "#3a4550"
 
-                Column {
+                GCText {
                     anchors.centerIn: parent
-                    spacing: GCStyle.halfMargins * 0.4
                     width: parent.width * 0.8
-
-                    GCText {
-                        width: parent.width
-                        horizontalAlignment: Text.AlignHCenter
-                        wrapMode: Text.WordWrap
-                        fontSize: GCText.smallSize
-                        font.bold: true
-                        color: "#ffffff"
-                        text: qsTr("SIMON DICE")
-                    }
-                    GCText {
-                        width: parent.width
-                        horizontalAlignment: Text.AlignHCenter
-                        fontSize: GCText.hugeSize
-                        font.bold: true
-                        color: "#ffffff"
-                        text: items.sequence.length
-                    }
+                    height: parent.height * 0.8
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    fontSizeMode: Text.Fit
+                    minimumPointSize: 7
+                    fontSize: GCText.hugeSize * 3
+                    font.bold: true
+                    color: "#ffffff"
+                    text: items.sequence.length
                 }
             }
         }

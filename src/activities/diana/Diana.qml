@@ -5,8 +5,8 @@
  * hand at the screen — the IR touch frame reports wherever it actually
  * hits as a tap, same as any other touch, and that's scored by which
  * colored ring it landed in. Score sits to the right, clear of the
- * target itself. No time limit at all: throw whenever you like, as
- * many times as you like.
+ * target itself. A turn is 3 throws, with a mandatory 5 second pause
+ * after each one (time to go fetch the real ball and bring it back).
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -32,30 +32,22 @@ ActivityBase {
         signal start
         signal stop
 
-        readonly property string highScoreKey: "diana-highscore"
-
         Component.onCompleted: {
             activity.start.connect(start)
             activity.stop.connect(stop)
-            var saved = ApplicationSettings.currentLevels(highScoreKey)
-            if (saved && saved.length > 0) {
-                var n = parseInt(saved[0], 10)
-                if (!isNaN(n))
-                    items.highScore = n
-            }
         }
 
         QtObject {
             id: items
-            property int score: 0
-            property int highScore: 0
+            property int throwsInTurn: 0
+            property int turnScore: 0
             property int lastPoints: -1
-            property bool throwing: false
+            property bool locked: false
+            property bool turnComplete: false
+            property int cooldownRemaining: 0
             property alias hitSound: hitSound
             property alias missSound: missSound
-
-            onScoreChanged: if (score > highScore) highScore = score
-            onHighScoreChanged: ApplicationSettings.setCurrentLevels(activityBackground.highScoreKey, [highScore.toString()])
+            property alias cooldownTimer: cooldownTimer
         }
 
         onStart: Activity.start(activity, items)
@@ -70,8 +62,11 @@ ActivityBase {
             source: "qrc:/gcompris/src/core/resource/sounds/audioclick.wav"
         }
 
-        function resetSession() {
-            Activity.newSession()
+        Timer {
+            id: cooldownTimer
+            interval: 1000
+            repeat: true
+            onTriggered: Activity.cooldownTick()
         }
 
         Item {
@@ -214,12 +209,63 @@ ActivityBase {
                 HudBadge {
                     anchors.horizontalCenter: parent.horizontalCenter
                     label: qsTr("Puntos")
-                    value: items.score
+                    value: items.turnScore
                 }
-                HudBadge {
+
+                GCText {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    label: qsTr("Récord")
-                    value: items.highScore
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
+                    fontSize: GCText.mediumSize
+                    font.bold: true
+                    color: GCStyle.whiteText
+                    text: qsTr("Tiro %1 de %2").arg(Math.min(items.throwsInTurn + 1, Activity.THROWS_PER_TURN)).arg(Activity.THROWS_PER_TURN)
+                }
+
+                GCText {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
+                    fontSize: GCText.mediumSize
+                    color: GCStyle.whiteText
+                    visible: items.cooldownRemaining > 0
+                    text: qsTr("Espera %1 s…").arg(items.cooldownRemaining)
+                }
+            }
+        }
+
+        // Turn complete: no more time pressure than the throws
+        // themselves — the next turn only starts once this button is
+        // tapped, whenever that is.
+        Rectangle {
+            id: turnCompleteOverlay
+            anchors.fill: parent
+            color: GCStyle.grayedBg
+            visible: items.turnComplete
+
+            Column {
+                anchors.centerIn: parent
+                spacing: GCStyle.baseMargins * 1.5
+                width: Math.min(parent.width * 0.8, 900)
+
+                GCText {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
+                    fontSize: GCText.largeSize
+                    font.bold: true
+                    color: GCStyle.whiteText
+                    text: qsTr("¡Turno terminado! Puntos conseguidos: %1").arg(items.turnScore)
+                }
+
+                GCButton {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    height: GCStyle.bigButtonHeight
+                    text: qsTr("Nuevo turno")
+                    onClicked: Activity.newTurn()
                 }
             }
         }
@@ -234,7 +280,7 @@ ActivityBase {
             content: BarEnumContent { value: help | home | reload }
             onHelpClicked: activity.displayDialog(dialogHelp)
             onHomeClicked: activity.home()
-            onReloadClicked: activityBackground.resetSession()
+            onReloadClicked: Activity.newTurn()
         }
     }
 }

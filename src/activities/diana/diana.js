@@ -4,8 +4,11 @@
  * A giant target for a REAL small ball, thrown by hand at the screen —
  * the IR touch frame reports wherever it actually hits as a tap, and
  * the score depends on which colored ring that real impact point falls
- * in. No time limit at all — this file only scores where a throw
- * landed; all animation/pacing lives in Diana.qml.
+ * in. A turn is 3 throws; after each throw there's a mandatory 5 second
+ * pause (time for whoever fetches the ball to bring it back) before
+ * the next one can register. This file only tracks turns/scoring and
+ * the cooldown countdown; the impact mark's own quick animation lives
+ * in Diana.qml.
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -22,22 +25,30 @@ var RINGS = [
     { factor: 0.20, innerFactor: 0.00, color: "#f9c74f", points: 50, textColor: "#232323" }
 ]
 
+var THROWS_PER_TURN = 3
+var COOLDOWN_SECONDS = 5
+
 var items
 var activity
 
 function start(activity_, items_) {
     activity = activity_
     items = items_
-    newSession()
+    newTurn()
 }
 
 function stop() {
+    items.cooldownTimer.stop()
 }
 
-function newSession() {
-    items.score = 0
+function newTurn() {
+    items.cooldownTimer.stop()
+    items.throwsInTurn = 0
+    items.turnScore = 0
     items.lastPoints = -1
-    items.throwing = false
+    items.locked = false
+    items.turnComplete = false
+    items.cooldownRemaining = 0
 }
 
 // (landX, landY) is the real impact point reported by the touch frame,
@@ -54,27 +65,46 @@ function scoreForLanding(landX, landY, targetRadius) {
 }
 
 // Called when the touch frame reports a real ball impact at
-// (tapX, tapY) (relative to the target's center). Returns null if a
-// throw is still being shown, so two near-simultaneous impacts don't
-// score twice for the same ball.
+// (tapX, tapY) (relative to the target's center). Returns null while
+// locked (mid-cooldown, or the turn's 3 throws are already done), so a
+// stray extra impact doesn't score again for the same ball or sneak in
+// an extra throw.
 function throwAt(tapX, tapY, targetRadius) {
-    if (items.throwing)
+    if (items.locked || items.turnComplete)
         return null
-    items.throwing = true
+    items.locked = true
 
     var points = scoreForLanding(tapX, tapY, targetRadius)
     items.lastPoints = points
-    items.score += points
+    items.turnScore += points
+    items.throwsInTurn += 1
     if (points > 0)
         items.hitSound.play()
     else
         items.missSound.play()
 
+    if (items.throwsInTurn >= THROWS_PER_TURN)
+        items.turnComplete = true
+
     return { "x": tapX, "y": tapY, "points": points }
 }
 
-// Called once the impact mark's animation has fully played out, to
-// allow the next throw to register.
+// Called once the impact mark's own quick animation has played out. If
+// the turn just ended, the "Nuevo turno" button is what unlocks the
+// next throw — no need for a countdown on top of that. Otherwise starts
+// the mandatory 5 second pause before another throw can register.
 function throwFinished() {
-    items.throwing = false
+    if (items.turnComplete)
+        return
+    items.cooldownRemaining = COOLDOWN_SECONDS
+    items.cooldownTimer.restart()
+}
+
+function cooldownTick() {
+    items.cooldownRemaining -= 1
+    if (items.cooldownRemaining <= 0) {
+        items.cooldownTimer.stop()
+        items.cooldownRemaining = 0
+        items.locked = false
+    }
 }

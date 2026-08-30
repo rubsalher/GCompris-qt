@@ -98,7 +98,10 @@ function scheduleNextMole() {
     if (!isPlaying)
         return
     var t = difficultyFraction()
-    var gap = lerp(1300, 500, t) + Math.random() * 300
+    // Elderly-friendly: the gap between moles barely tightens over the
+    // round (was 1300ms->500ms, more than doubling the pace by the end —
+    // too fast to react to). Now it only eases from 1300ms to 1000ms.
+    var gap = lerp(1300, 1000, t) + Math.random() * 300
     items.spawnTimer.interval = gap
     items.spawnTimer.restart()
 }
@@ -108,7 +111,10 @@ function spawnMole() {
         return
 
     var t = difficultyFraction()
-    var upDuration = lerp(1700, 800, t)
+    // Elderly-friendly: moles used to stay up for as little as 800ms near
+    // the end, not enough time to spot and reach them. Now the floor is
+    // 1300ms, close to the starting 1700ms.
+    var upDuration = lerp(1700, 1300, t)
 
     var free = freeHoleIndices()
     if (free.length > 0) {
@@ -117,8 +123,9 @@ function spawnMole() {
     }
 
     // Occasionally a second mole pops up at the same time, more often as
-    // the round advances (elderly-friendly: starts at 0%, never above 35%).
-    var doubleChance = lerp(0.0, 0.35, t)
+    // the round advances (elderly-friendly: starts at 0%, capped at 15%
+    // instead of 35% — two moles at once is much harder to handle).
+    var doubleChance = lerp(0.0, 0.15, t)
     if (Math.random() < doubleChance) {
         var free2 = freeHoleIndices()
         if (free2.length > 0) {

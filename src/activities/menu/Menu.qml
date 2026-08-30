@@ -573,6 +573,12 @@ ActivityBase {
                     color: GCStyle.whiteBg
                     opacity: 0.5
                 }
+                // Elderly-friendly build: the difficulty-star badges and
+                // the "new activity" sunburst badge that used to sit on
+                // top of every tile's icon were dropped — clutter with no
+                // real use in a fork where every activity in the menu is
+                // already a fixed, hand-picked set (see also the favorite
+                // star removed below).
                 Image {
                     id: activityIcon
                     source: "qrc:/gcompris/src/activities/" + activityInfoTreeItem.icon
@@ -584,39 +590,6 @@ ActivityBase {
                     fillMode: Image.PreserveAspectFit
                     anchors.margins: GCStyle.halfMargins
                     opacity: delegateItem.enabled ? 1 : 0.5
-
-                    Image {
-                        id: minimalDifficultyIcon
-                        source: "qrc:/gcompris/src/core/resource/difficulty" +
-                                activityInfoTreeItem.minimalDifficulty + ".svg"
-                        anchors.top: parent.top
-                        sourceSize.width: iconWidth * 0.15
-                    }
-                    Image {
-                        id: iconSeparator
-                        source: "qrc:/gcompris/src/core/resource/separator.svg"
-                        visible: activityInfoTreeItem.minimalDifficulty !== activityInfoTreeItem.maximalDifficulty
-                        anchors.top: parent.top
-                        anchors.left: minimalDifficultyIcon.right
-                        sourceSize.height: minimalDifficultyIcon.height
-                    }
-                    Image {
-                        source: "qrc:/gcompris/src/core/resource/difficulty" +
-                                activityInfoTreeItem.maximalDifficulty + ".svg"
-                        visible: iconSeparator.visible
-                        anchors.top: parent.top
-                        anchors.left: iconSeparator.right
-                        sourceSize.width: minimalDifficultyIcon.width
-                    }
-                    Image {
-                        anchors {
-                            horizontalCenter: parent.horizontalCenter
-                            top: parent.top
-                        }
-                        source: activityInfoTreeItem.createdInVersion > lastGCVersionRanCopy
-                                ? activity.url + "new.svg" : ""
-                        sourceSize.width: 25 * ApplicationInfo.ratio
-                    }
                 }
                 GCText {
                     id: title
@@ -642,22 +615,6 @@ ActivityBase {
                 MouseArea {
                     anchors.fill: activityCard
                     onClicked: selectCurrentItem()
-                }
-
-                Image {
-                    source: activity.url + (activityInfoTreeItem.favorite ? "all.svg" : "all_disabled.svg");
-                    anchors {
-                        top: parent.top
-                        right: parent.right
-                        rightMargin: GCStyle.halfMargins
-                    }
-                    sourceSize.width: iconWidth * 0.25
-                    visible: ApplicationSettings.sectionVisible
-                    opacity: activityIcon.opacity
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: activityInfoTreeItem.favorite = !activityInfoTreeItem.favorite
-                    }
                 }
 
                 function selectCurrentItem() {
