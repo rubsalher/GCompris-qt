@@ -2210,3 +2210,53 @@ sección `[balancebox]` con su progreso guardado — son datos propios
 del usuario, no se han tocado; el propio `Menu.qml` (función
 `applyMenuOrder`) ya ignora sin problema las entradas de actividades
 que ya no existen, comprobado en este mismo arranque.
+
+## Fase 24: el zip portable no arrancaba (estructura de carpetas incorrecta)
+
+Aviso: "no me deja abrir gcompris con los ultimos dos zips no aparecen
+los dos apartados ni BIN ni el otro, descomprimo el zip abro el juego
+y no se abre nada."
+
+**Causa encontrada**: la carpeta `gcompris-portable/` (usada para
+armar los dos últimos zips) tenía `GCompris.exe` suelto en la raíz,
+con `share/` como subcarpeta directa suya. Pero el propio código de
+GCompris (`ApplicationInfo::getFilePath()` en
+`src/core/ApplicationInfo.cpp`, con `GCOMPRIS_DATA_FOLDER` fijado en
+tiempo de compilación a `../share/GCompris` para Windows en
+`src/core/config.h.in`) busca sus recursos (`rcc`) en
+`<carpeta_del_exe>/../share/GCompris/rcc/`, es decir, **exige que el
+.exe esté un nivel por debajo de `share`**, normalmente dentro de una
+carpeta `bin`. Con la estructura plana, ese "un nivel arriba" caía
+fuera de la carpeta portable entera, así que en la práctica el .exe
+NUNCA leía los recursos de `gcompris-portable/share/` — cuando por
+casualidad SÍ arrancaba sin error en este PC era porque, al probarlo
+sin salir de esa carpeta, esa ruta ".." coincidía con la instalación
+oficial vieja de GCompris que hay en la raíz de `GCompris-Qt/share`
+(anterior a toda esta adaptación). En cualquier otro sitio (como al
+descomprimir el zip en el PC del usuario) esa carpeta no existe y
+falla con "Failed to load the resource file ... core.rcc / menu.rcc /
+activities.rcc" — sin ninguna ventana visible, tal como describía el
+aviso.
+
+**Solución**: se ha reorganizado `gcompris-portable/` metiendo el
+.exe, todas las DLLs y las carpetas de plugins de Qt (`platforms`,
+`imageformats`, `qml`, etc.) dentro de una subcarpeta `bin/`, dejando
+`share/` como hermana de `bin/` (igual que la propia carpeta de
+compilación `build/bin` + `build/share` que se usa para probar en este
+PC, y que coincide con la estructura de la instalación oficial vieja:
+por eso el usuario esperaba ver "bin" al abrir el zip). El zip se ha
+vuelto a generar comprimiendo `bin/` y `share/` directamente (sin
+carpeta contenedora), así que al descomprimirlo aparecen esas dos
+carpetas sueltas.
+
+**Verificado de extremo a extremo**, no solo en la carpeta de
+siempre: se ha descomprimido el zip nuevo en una ubicación totalmente
+distinta (`Desktop\zip_test_extract2`, fuera del proyecto) y se ha
+arrancado `bin\GCompris.exe` desde ahí, sin ningún error de carga de
+recursos (solo el ruido de arranque ya conocido). Antes de este fallo,
+ninguno de los zips de esta sesión se había probado así — se
+verificaban solo con `--launch`/`--window` desde `build/bin`, que
+nunca podía revelar este problema porque usa su propia carpeta
+`build/share` correctamente emparejada. A partir de ahora, cualquier
+zip nuevo debe probarse descomprimiéndolo en una carpeta ajena al
+proyecto antes de darlo por bueno.
