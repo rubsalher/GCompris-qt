@@ -19,7 +19,7 @@ atrapamanzanas
 # baby_wordprocessor
 babymatch
 # babyshapes
-balancebox
+# balancebox (removed, elderly-friendly build)
 # ballcatch
 bargame
 # bargame_2players

@@ -2163,3 +2163,50 @@ las traducciones.
 
 **Verificado** con `--launch aplastatopos --window --software-renderer`,
 sin errores de QML/JS (solo el ruido de arranque ya conocido).
+
+## Fase 23: eliminar "Caja de equilibrio" (balancebox)
+
+Petición: "Elimina el juego caja de equilibrio y crea un zip que
+funcione." Se ha quitado por completo la actividad `balancebox`:
+
+- Borrada la carpeta `src/activities/balancebox/` entera (incluido su
+  editor de niveles).
+- Comentada la línea `balancebox` en `src/activities/activities.txt`.
+- No usaba ninguna clave de puntuación propia (`ApplicationSettings`),
+  así que `ConfigurationItem.qml` no necesitaba cambios.
+- La actividad `maze` (ya oculta del menú, `enabled: false`) se
+  mantenía compilada solo porque `balancebox/Balancebox.qml` reutilizaba
+  su imagen de fondo (`maze/resource/maze_bg.svg`). Al desaparecer ese
+  único motivo, se ha actualizado el comentario de
+  `src/activities/maze/ActivityInfo.qml` para no dejar una explicación
+  obsoleta (`maze` se deja compilado igualmente, sin más cambios: no es
+  parte de lo pedido y no hace daño mantenerlo).
+
+**Reconfiguración necesaria**: al quitar una carpeta con su propio
+`CMakeLists.txt` (`add_subdirectory` en
+`src/activities/CMakeLists.txt` viene generado automáticamente a
+partir de `activities.txt`), hace falta un `cmake .` completo antes de
+compilar, no basta con `cmake --build`. Después, compilar solo el
+target `binaries` (ver Fase 22) regenera `activities.rcc` y `maze.rcc`
+sin tocar las traducciones.
+
+Como en cambios anteriores de actividades, ninja deja un `.rcc`
+obsoleto (`balancebox.rcc`) en `build/share/GCompris/rcc/` porque ya
+no hay ninguna regla que lo borre — se ha eliminado a mano antes de
+sincronizar la carpeta portable.
+
+**Zip portable**: se ha regenerado sincronizando
+`build/share/GCompris/rcc` → `gcompris-portable/share/GCompris/rcc`
+con `robocopy /MIR` (que además purga los `.rcc` obsoletos del lado
+portable) y comprimiendo de nuevo con `Compress-Archive`. El
+`GCompris.exe` no cambia de contenido (mismo hash SHA-256 que antes),
+ya que esta actividad no tenía código C++ propio.
+
+**Verificado** con `--window --software-renderer` (menú completo, sin
+`--launch` porque la actividad ya no existe), sin errores de QML/JS.
+Nota: la configuración del usuario (`GCompris.conf`) todavía menciona
+`balancebox` en `menu-activity-order`, en `[Favorite]` y tiene una
+sección `[balancebox]` con su progreso guardado — son datos propios
+del usuario, no se han tocado; el propio `Menu.qml` (función
+`applyMenuOrder`) ya ignora sin problema las entradas de actividades
+que ya no existen, comprobado en este mismo arranque.

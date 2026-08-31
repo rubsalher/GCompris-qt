@@ -7,9 +7,9 @@
 import core 1.0
 
 ActivityInfo {
-  // elderly-friendly build: kept compiled (balancebox/Balancebox.qml reuses
-  // its background) but hidden from the menu, not one of the chosen
-  // activities for this build
+  // elderly-friendly build: kept compiled but hidden from the menu, not
+  // one of the chosen activities for this build (balancebox, the other
+  // activity that reused its background, has since been removed too)
   enabled: false
   name: "maze/Maze.qml"
   difficulty: 1
