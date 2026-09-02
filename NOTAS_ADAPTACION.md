@@ -2454,3 +2454,15 @@ Con esto la barra ya muestra `< 1 >` / `< 2 >` y permite cambiar de
 nivel a mano en cualquier momento (no solo automáticamente al terminar
 el objetivo), igual que en el resto de actividades multi-nivel del
 proyecto. Verificado con `--launch fruitslice`, sin errores.
+
+**Commit y zip (2026-09-02)**: se han comiteado los cambios pendientes
+de las Fases 25-29 (commit `8feda35`, rama `adaptacion-gent-gran`).
+Zip portable regenerado como `GCompris-Qt/gcompris 2.0.zip` (raíz del
+proyecto, fuera de `gcompris-qt-src/`) siguiendo el proceso de la Fase
+24: `bin/` (exe sin cambios respecto al zip anterior, mismo hash
+SHA-256, ya que no hubo cambios de C++) + `share/GCompris/{rcc,translations}`
+sincronizados con `robocopy /MIR` desde `build/`, comprimidos sueltos
+en la raíz del zip (no dentro de una carpeta contenedora). Verificado
+extrayéndolo en una carpeta temporal ajena al proyecto y arrancando
+`bin\GCompris.exe` desde ahí: sin errores de carga de recursos,
+`locale=es` correcto.
