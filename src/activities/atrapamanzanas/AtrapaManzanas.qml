@@ -66,7 +66,7 @@ ActivityBase {
             property alias catchSound: catchSound
             property alias playArea: playArea
             property alias basket: basket
-            readonly property real appleSize: Math.max(64, playArea.width * 0.05)
+            readonly property real appleSize: Math.max(130, playArea.width * 0.1)
             onScoreChanged: if (score > highScore) highScore = score
             onHighScoreChanged: ApplicationSettings.setCurrentLevels(activityBackground.highScoreKey, [highScore.toString()])
 

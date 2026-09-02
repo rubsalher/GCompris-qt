@@ -4,7 +4,7 @@
  * A rain of food falls from the sky at random points across the screen;
  * move the basket by touching anywhere to catch it before it hits the
  * ground (uncaught food just disappears, no penalty). Runs for a fixed
- * countdown and gets a bit faster as it goes on. Three selectable levels
+ * countdown and gets a bit faster as it goes on. Four selectable levels
  * make the whole round progressively faster (level itself doesn't change
  * during a round — only the automatic ramp within a round does).
  *
@@ -21,11 +21,15 @@ var FOOD_TYPES = [
     "qrc:/gcompris/src/activities/atrapamanzanas/resource/grapes.svg"
 ]
 
-// Three difficulty levels, each one faster overall than the last (fall
+// Four difficulty levels, each one faster overall than the last (fall
 // duration in ms, spawn gap in ms + a bit of random jitter on top of it).
 // Within a single round, difficulty still ramps gently from the "start"
 // to the "end" value as the 60s countdown advances (see difficultyFraction).
+// Level 1 was added on request as a noticeably slower tier in front of the
+// original three (which shifted down to levels 2-4); it's also the level
+// the activity opens on by default (see Core.getInitialLevel below).
 var levelProperty = [
+    { fallStart: 3600, fallEnd: 2200, gapStart: 2000, gapEnd: 1200, gapJitter: 350 },
     { fallStart: 2900, fallEnd: 1450, gapStart: 1600, gapEnd: 700, gapJitter: 300 },
     { fallStart: 2200, fallEnd: 1100, gapStart: 1200, gapEnd: 550, gapJitter: 220 },
     { fallStart: 1600, fallEnd: 800,  gapStart: 900,  gapEnd: 420, gapJitter: 170 }

@@ -4,17 +4,29 @@
  * Classic "whack-a-mole": moles pop up at random holes in a grid and hide
  * again after a while; tap them before they hide to score. Most moles are
  * worth 1 point, a rarer golden one is worth 2. The game runs for a fixed
- * countdown and gets a bit faster as it goes on.
+ * countdown and gets a bit faster as it goes on. Two selectable levels
+ * make the whole round progressively faster (level itself doesn't change
+ * during a round — only the automatic ramp within a round does).
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 .pragma library
+.import "qrc:/gcompris/src/core/core.js" as Core
 
 // Must match holesContainer.columns * holesContainer.rows in AplastaTopos.qml.
 var GRID_SIZE = 12
 var TOTAL_SECONDS = 60
 // Chance that a spawned mole is the golden, 2-point variant.
 var GOLDEN_CHANCE = 0.2
+
+// Two difficulty levels (how long a mole stays up, and the gap before the
+// next one), each faster overall than the last. Level 2 is the original
+// single-speed tuning; level 1 is a new, noticeably slower tier added on
+// request, and is also the level the activity opens on by default.
+var levelProperty = [
+    { upStart: 2600, upEnd: 2200, gapStart: 1800, gapEnd: 1500, gapJitter: 300 },
+    { upStart: 2000, upEnd: 1600, gapStart: 1300, gapEnd: 1000, gapJitter: 300 }
+]
 
 var items
 var activity
@@ -23,6 +35,18 @@ var isPlaying = false
 function start(activity_, items_) {
     activity = activity_
     items = items_
+    items.numberOfLevel = levelProperty.length
+    items.currentLevel = Core.getInitialLevel(items.numberOfLevel)
+    resetBoard()
+}
+
+function nextLevel() {
+    items.currentLevel = Core.getNextLevel(items.currentLevel, items.numberOfLevel)
+    resetBoard()
+}
+
+function previousLevel() {
+    items.currentLevel = Core.getPreviousLevel(items.currentLevel, items.numberOfLevel)
     resetBoard()
 }
 
@@ -97,11 +121,9 @@ function freeHoleIndices() {
 function scheduleNextMole() {
     if (!isPlaying)
         return
+    var level = levelProperty[items.currentLevel]
     var t = difficultyFraction()
-    // Elderly-friendly: the gap between moles barely tightens over the
-    // round (was 1300ms->500ms, more than doubling the pace by the end —
-    // too fast to react to). Now it only eases from 1300ms to 1000ms.
-    var gap = lerp(1300, 1000, t) + Math.random() * 300
+    var gap = lerp(level.gapStart, level.gapEnd, t) + Math.random() * level.gapJitter
     items.spawnTimer.interval = gap
     items.spawnTimer.restart()
 }
@@ -110,11 +132,9 @@ function spawnMole() {
     if (!isPlaying)
         return
 
+    var level = levelProperty[items.currentLevel]
     var t = difficultyFraction()
-    // Elderly-friendly: moles used to stay up for as little as 800ms near
-    // the end, not enough time to spot and reach them. Now the floor is
-    // 1300ms, close to the starting 1700ms.
-    var upDuration = lerp(1700, 1300, t)
+    var upDuration = lerp(level.upStart, level.upEnd, t)
 
     var free = freeHoleIndices()
     if (free.length > 0) {

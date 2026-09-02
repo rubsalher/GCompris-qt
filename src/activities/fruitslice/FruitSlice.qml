@@ -51,6 +51,7 @@ ActivityBase {
             property alias winSound: winSound
             property real spawnInterval: 3200
             property real doubleChance: 0.1
+            property real speedFactor: 1.0
         }
 
         onStart: Activity.start(activity, activityBackground, bar, bonus, items)
@@ -161,11 +162,11 @@ ActivityBase {
 
         Bar {
             id: bar
-            // Elderly-friendly build: only one difficulty (the old level 6)
-            // is kept, so there is nothing to navigate between — no level
-            // buttons shown.
-            content: BarEnumContent { value: help | home }
+            level: items.currentLevel + 1
+            content: BarEnumContent { value: help | home | level }
             onHelpClicked: activity.displayDialog(dialogHelp)
+            onPreviousLevelClicked: Activity.previousLevel()
+            onNextLevelClicked: Activity.nextLevel()
             onHomeClicked: activity.home()
         }
 

@@ -2260,3 +2260,197 @@ nunca podía revelar este problema porque usa su propia carpeta
 `build/share` correctamente emparejada. A partir de ahora, cualquier
 zip nuevo debe probarse descomprimiéndolo en una carpeta ajena al
 proyecto antes de darlo por bueno.
+
+## Fase 25: la aplicación volvió a estar en inglés, topos y frutas
+
+Tres peticiones: "La aplicacion vuelve a estar en ingles arreglalo.
+Aumenta un poco lo que duran los topos en pantalla. En el juego caida
+de frutas aumenta el tamaño de las frutas."
+
+**Por qué se puso en inglés** (efecto secundario de la Fase 24): al
+probar el zip roto (antes de arreglar la carpeta `bin`/`share`),
+`core.rcc` no cargó — y `LanguageList.qml` vive dentro de `core.rcc`.
+`ApplicationInfo::loadTranslation()`
+(`src/core/ApplicationInfo.cpp:355`) construye la lista de idiomas
+soportados instanciando ese mismo QML; al no poder cargarlo, la lista
+salió vacía, así que CUALQUIER idioma (incluido `es_ES.UTF-8`) se
+consideró "no soportado" y el código cayó al idioma "system", **y lo
+guardó permanentemente** en la configuración
+(`ApplicationSettings::getInstance()->setLocale(locale)` en esa misma
+función) — la configuración es un único archivo compartido por
+cualquier copia del juego que se ejecute, así que esa prueba rota dejó
+"grabado" `locale=system` para siempre, no solo para esa sesión. Con
+la carpeta portable ya arreglada esto no debería repetirse, pero se ha
+corregido el valor a mano en
+`%LOCALAPPDATA%\GCompris\GCompris.conf` (`locale=es_ES.UTF-8`) y se ha
+comprobado en el log de arranque que ahora sí reconoce
+`"locale", "es"` sin ningún aviso de "no soportado".
+
+**Topos más lentos (otra vez)**: en `aplastatopos.js`, el tiempo que
+cada topo aguanta arriba (`upDuration` en `spawnMole()`) se ha subido
+de 1700ms→1300ms (Fase 22) a **2000ms→1600ms**.
+
+**Frutas más grandes en "Lluvia de comida"** (`atrapamanzanas`, el
+juego de la cesta atrapando comida que cae — no `fruitslice`/"Corta la
+fruta", que es otro juego distinto): en
+`AtrapaManzanas.qml`, `appleSize` ha pasado de
+`Math.max(64, playArea.width * 0.05)` a
+`Math.max(96, playArea.width * 0.075)` — unas 1.5 veces más grande.
+
+**Zip regenerado** con `bin`/`share` en la raíz (Fase 24) y, esta vez,
+sincronizando también `share/GCompris/translations` (antes solo se
+sincronizaba `rcc`) — la carpeta portable nunca había llevado las
+traducciones, así que aunque `es_ES.UTF-8` se reconociera bien, sin
+`gcompris_qt_es.qm` los textos de la interfaz general (los que no son
+de nuestras actividades propias) habrían salido en inglés igualmente.
+Verificado extrayendo el zip en una carpeta nueva y arrancando desde
+ahí: sin errores, `locale=es_ES.UTF-8` se mantiene después de cerrar
+el juego.
+
+## Fase 26: nivel nuevo y más lento en Aplastatopos y Lluvia de comida
+
+Petición: "En los juegos de aplasta topos y el cesto de la comida crea
+un nivel mas en el nivel 1 baja bastante la velocidad del juego en la
+que se va el topo y lo rapido que cae la fruta."
+
+**Lluvia de comida** (`atrapamanzanas`) ya tenía un sistema de 3
+niveles (`levelProperty` en `atrapamanzanas.js`) y arranca siempre en
+el nivel 1 (`Core.getInitialLevel` empieza en 0 salvo argumento de
+línea de comandos, que aquí no se usa) — es decir, el usuario ya
+estaba jugando siempre con el nivel más lento de los 3 que había, y
+aun así le parecía rápido. Se ha añadido un nivel 1 nuevo, bastante
+más lento, delante de los 3 que había (que pasan a ser niveles 2-4):
+caída de la fruta `fallStart`/`fallEnd` de 2900-1450ms a 3600-2200ms,
+y separación entre frutas `gapStart`/`gapEnd` de 1600-700ms a
+2000-1200ms.
+
+**Aplastatopos** no tenía ningún sistema de niveles (la barra inferior
+solo tenía ayuda y inicio). Se le ha añadido uno completo, copiando el
+patrón ya usado en `atrapamanzanas` (mismo `Core.getInitialLevel` /
+`getNextLevel` / `getPreviousLevel` de `core.js`, mismas propiedades
+`currentLevel`/`numberOfLevel` sincronizadas con `activity.*`, mismo
+`level` + flechas en `BarEnumContent`). Dos niveles: el nivel 2 es
+exactamente la velocidad que ya había (para no perder el ajuste de las
+Fases 22 y 25); el nivel 1, nuevo y bastante más lento, sube el tiempo
+que el topo aguanta arriba (`upStart`/`upEnd`) de 2000-1600ms a
+2600-2200ms, y el hueco entre topos (`gapStart`/`gapEnd`) de
+1300-1000ms a 1800-1500ms. Arranca en el nivel 1 por defecto, igual
+que `atrapamanzanas`.
+
+**Verificado** con un `console.warn` temporal en el `start()` de cada
+actividad confirmando `numberOfLevel`/`currentLevel` exactos
+(aplastatopos: 2 niveles, empieza en el 0 → "Nivel 1"; atrapamanzanas:
+4 niveles, empieza en el 0 → "Nivel 1"), quitado antes de la
+compilación final. Lanzados ambos con `--launch`/`--window` y el menú
+completo, sin errores. Zip regenerado, sincronizado y comprobado de
+nuevo extrayéndolo en una carpeta ajena al proyecto.
+
+## Fase 27: frutas más lentas y grandes en Corta la fruta, y más grandes en Lluvia de comida
+
+Petición: "En el juego de corta fruta haz que vayan bastante mas lento
+y aumenta el tamaño de las frutas en el corta frutas y en el juego del
+cesto, ni hagas zips todavia." (sin zip esta vez, según lo pedido).
+
+**Corta la fruta** (`fruitslice.js`):
+- Velocidad: la gravedad que rige el arco de la fruta baja de `H * 1.3`
+  a `H * 0.55` (H = alto de la zona de juego). Al ser menor la
+  gravedad, con la misma altura de pico (`peakHeight`, sin tocar) la
+  fruta necesita menos velocidad de lanzamiento Y tarda más en caer —
+  ambas cosas a la vez, con una sola constante. El movimiento
+  horizontal ya se calculaba a partir del tiempo de vuelo, así que
+  también se ralentiza solo, sin tocarlo aparte.
+- Tamaño: las medidas base de `fruitTypes` suben todas ~30% (ej.
+  manzana de 120x120 a 155x155, plátano de 145x90 a 190x115). El
+  escalado aleatorio adicional por cada fruta que ya existía
+  (`sizeScale`, hasta +60%) se mantiene igual encima de estas medidas
+  mayores.
+
+**Lluvia de comida** (`atrapamanzanas`): `appleSize` en
+`AtrapaManzanas.qml` sube otra vez, de `Math.max(96, ancho*0.075)`
+(Fase 25) a `Math.max(130, ancho*0.1)`.
+
+**Verificado** con `--launch fruitslice` y `--launch atrapamanzanas`,
+sin errores de QML/JS. **No se ha regenerado el zip** (pedido
+explícito de esperar).
+
+## Fase 28: en Corta la fruta, algunas frutas seguían yendo muy rápido
+
+Aviso: "En el corta frutas todavia hay algunas frutas que van muy
+rapido."
+
+**Causa**: las frutas que salen por los laterales (izquierda/derecha,
+un 40% del total — ver `edgeRoll` en `spawnFruit()` de
+`fruitslice.js`) calculaban su velocidad horizontal como (distancia
+hasta un punto casi al otro lado de la pantalla) ÷ (tiempo de vuelo).
+Al bajar la gravedad en la Fase 27 para que todas las frutas cayeran
+más despacio, el tiempo de vuelo subió, pero la distancia a cruzar
+seguía siendo casi toda la pantalla — así que su velocidad horizontal
+apenas cambió, mientras que las frutas que salen por abajo (60%, con
+una deriva lateral pequeña y fija) sí se notaban más lentas. Resultado:
+las laterales se quedaron destacando como "las rápidas".
+
+**Solución**: en vez de calcular la velocidad como distancia ÷ tiempo
+de vuelo (lo que la hace depender de cuánto tarde esa fruta en concreto
+en caer), las frutas de los laterales ahora reciben directamente una
+velocidad horizontal limitada (`vx = W * (0.07 + Math.random() * 0.06)`,
+con signo según el lado), igual que ya hacían las de abajo. Así ninguna
+fruta puede salir "disparada" solo por tener que recorrer más pantalla
+en el mismo tiempo.
+
+**Verificado** con `--launch fruitslice`, sin errores de QML/JS. Sigue
+sin regenerarse el zip.
+
+## Fase 29: nuevo nivel en Corta la fruta, un poco más rápido
+
+Petición: "Añade un nivel mas sumando un poco mas la velocidad de las
+frutas, en el juego de cortar la fruta."
+
+**`fruitslice.js`**: `levelProperty` pasa de tener 1 nivel a 2. Se
+añade un campo nuevo, `speedFactor` (1.0 en el nivel 1, 1.2 en el
+nivel 2), que multiplica la gravedad (`gravity`, controla tanto la
+velocidad de lanzamiento como la de caída del arco) y la velocidad
+horizontal de las frutas que salen por los laterales (`vx` en la rama
+izquierda/derecha de `spawnFruit()`). `spawnInterval`, `target` y
+`doubleChance` quedan iguales en ambos niveles — solo cambia la
+velocidad de la fruta, tal y como se pidió.
+
+`initLevel()` ahora también lee `speedFactor` del nivel actual y lo
+guarda en `items.speedFactor` (nueva `property real speedFactor: 1.0`
+en `FruitSlice.qml`).
+
+**Navegación entre niveles**: la barra sigue sin botones de nivel (se
+quitaron a propósito cuando solo había 1 nivel, ver Fases previas). No
+hacía falta añadirlos: `Bonus.win` ya está conectado a
+`activity.nextLevel()`, así que al completar el objetivo de frutas de
+un nivel se pasa automáticamente al otro, y con `numberOfLevel = 2`
+(`Core.getNextLevel`) el juego simplemente cicla entre nivel 1 y nivel
+2 cada vez que se completa uno. Comentario de `FruitSlice.qml`
+actualizado para reflejar esto.
+
+**Verificado** con `--launch fruitslice --window --software-renderer`
+tras una recompilación completa (`cmake --build .`, sin necesidad de
+reconfigurar porque no se añadió ningún `.qml` nuevo): sin errores de
+QML/JS, solo los warnings preexistentes de `banana.svg` (ajenos a este
+cambio). No se ha regenerado el zip.
+
+**Corrección a la Fase 29**: tras confirmar por código que el cambio de
+nivel funcionaba (nivel 0→1 y `speedFactor` 1.0→1.2 verificados con un
+`Timer` de depuración temporal, luego retirado), el usuario pidió
+explícitamente mostrar las flechas de nivel en la barra — igual que ya
+tienen "Lluvia de comida" y "Aplastatopos" — para poder ver/confirmar
+en qué nivel está, en vez de que el cambio sea silencioso. Se añadió a
+`FruitSlice.qml`, mismo patrón que esas dos actividades:
+```
+Bar {
+    id: bar
+    level: items.currentLevel + 1
+    content: BarEnumContent { value: help | home | level }
+    onPreviousLevelClicked: Activity.previousLevel()
+    onNextLevelClicked: Activity.nextLevel()
+    ...
+}
+```
+Con esto la barra ya muestra `< 1 >` / `< 2 >` y permite cambiar de
+nivel a mano en cualquier momento (no solo automáticamente al terminar
+el objetivo), igual que en el resto de actividades multi-nivel del
+proyecto. Verificado con `--launch fruitslice`, sin errores.

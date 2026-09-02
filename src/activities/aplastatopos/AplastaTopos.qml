@@ -56,6 +56,10 @@ ActivityBase {
             property int highScore: 0
             property int remainingSeconds: Activity.TOTAL_SECONDS
             property string gameState: "ready" // "ready" | "playing" | "over"
+            property int currentLevel: activity.currentLevel
+            onCurrentLevelChanged: activity.currentLevel = currentLevel
+            property int numberOfLevel: 0
+            onNumberOfLevelChanged: activity.numberOfLevel = numberOfLevel
             property alias holesRepeater: holesRepeater
             property alias spawnTimer: spawnTimer
             property alias countdownTimer: countdownTimer
@@ -230,8 +234,11 @@ ActivityBase {
 
         Bar {
             id: bar
-            content: BarEnumContent { value: help | home }
+            level: items.currentLevel + 1
+            content: BarEnumContent { value: help | home | level }
             onHelpClicked: activity.displayDialog(dialogHelp)
+            onPreviousLevelClicked: Activity.previousLevel()
+            onNextLevelClicked: Activity.nextLevel()
             onHomeClicked: activity.home()
         }
     }
