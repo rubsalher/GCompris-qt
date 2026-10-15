@@ -4,7 +4,7 @@
  * A giant target for a REAL small ball, thrown by hand at the screen —
  * the IR touch frame reports wherever it actually hits as a tap, and
  * the score depends on which colored ring that real impact point falls
- * in. A turn is 3 throws; after each throw there's a mandatory 5 second
+ * in. A turn is 6 throws; after each throw there's a mandatory 3 second
  * pause (time for whoever fetches the ball to bring it back) before
  * the next one can register. This file only tracks turns/scoring and
  * the cooldown countdown; the impact mark's own quick animation lives
@@ -25,8 +25,8 @@ var RINGS = [
     { factor: 0.20, innerFactor: 0.00, color: "#f9c74f", points: 50, textColor: "#232323" }
 ]
 
-var THROWS_PER_TURN = 3
-var COOLDOWN_SECONDS = 5
+var THROWS_PER_TURN = 6
+var COOLDOWN_SECONDS = 3
 
 var items
 var activity
@@ -92,7 +92,7 @@ function throwAt(tapX, tapY, targetRadius) {
 // Called once the impact mark's own quick animation has played out. If
 // the turn just ended, the "Nuevo turno" button is what unlocks the
 // next throw — no need for a countdown on top of that. Otherwise starts
-// the mandatory 5 second pause before another throw can register.
+// the mandatory 3 second pause before another throw can register.
 function throwFinished() {
     if (items.turnComplete)
         return

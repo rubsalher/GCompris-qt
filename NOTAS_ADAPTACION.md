@@ -365,7 +365,7 @@ verdad por primera vez**. Notas del proceso, por si hay que repetirlo:
 - `OPENSSL_ROOT_DIR`/`OPENSSL_INCLUDE_DIR` deben apuntar a una ruta **sin
   espacios** (`C:\Program Files\OpenSSL-Win64` falla al compilar el `.rc` de
   Windows) — se copiaron `libcrypto.lib`/`libssl.lib`/`include/` a
-  `C:\Users\Utente\openssl-mingw\`.
+  `tools\openssl-mingw\`.
 - Con MinGW hace falta además marcar los módulos Qt Multimedia, Graphs y
   Sensors por separado en el instalador (no vienen con el paquete base).
 - Se compiló con `-DBUILD_SERVER=OFF -DSKIP_TRANSLATIONS=ON` (el servidor de
@@ -546,7 +546,7 @@ le puso (`ON`) hasta que se pasa explícitamente `-DSKIP_TRANSLATIONS=OFF`.
 Además hacía falta instalar `gettext` para Windows (no viene con Qt ni con
 MinGW) — se usó el paquete portable de
 [mlocati/gettext-iconv-windows](https://github.com/mlocati/gettext-iconv-windows),
-descomprimido en `C:\Users\Utente\gettext-tools\`, con su `bin\` añadido al
+descomprimido en `tools\gettext-tools\`, con su `bin\` añadido al
 PATH al compilar. El reloj/fecha del menú también tenía el mismo problema:
 `Qt.formatDateTime` usa el locale del sistema operativo, no el idioma
 elegido dentro de la app — se cambió a `Qt.locale(ApplicationSettings.locale).toString(...)`
@@ -620,7 +620,7 @@ Lo primero que debería hacer una sesión nueva es leer este fichero
 para ver el estado exacto. Punto de partida rápido para volver a compilar:
 ver los flags de `cmake` usados en esta fase (`-DCOMPRESSED_AUDIO=ogg
 -DSKIP_TRANSLATIONS=OFF` además de los de la Fase 1), y añadir
-`C:\Users\Utente\gettext-tools\bin` al PATH.
+`tools\gettext-tools\bin` al PATH.
 
 ---
 
@@ -2466,3 +2466,389 @@ en la raíz del zip (no dentro de una carpeta contenedora). Verificado
 extrayéndolo en una carpeta temporal ajena al proyecto y arrancando
 `bin\GCompris.exe` desde ahí: sin errores de carga de recursos,
 `locale=es` correcto.
+
+## Fase 30: Diana con 6 tiros por turno y 3 segundos de espera entre lanzamientos
+
+Petición: "En la aplicacion de la diana añade 6 tiros en total por
+ronda y 3 segundos de couldown entre lanzamientos."
+
+**`diana.js`**: `THROWS_PER_TURN` sube de 3 a 6 y `COOLDOWN_SECONDS`
+baja de 5 a 3 (eran las únicas dos constantes que controlan esto — el
+resto de la lógica de turno/cooldown ya las usa directamente, sin
+número mágico repetido en ningún otro sitio). Comentarios de cabecera
+actualizados a los nuevos valores.
+
+**`Diana.qml`**: el texto "Tiro X de Y" ya leía `Activity.THROWS_PER_TURN`
+dinámicamente, no hizo falta tocarlo.
+
+**`ActivityInfo.qml`**: el texto de ayuda (`manual`) mencionaba "3
+tiros" y "5 segundos" a mano en dos sitios — actualizado a "6 tiros" y
+"3 segundos".
+
+**Verificado** con `--launch diana --window --software-renderer`, sin
+errores de QML/JS.
+
+## Fase 31: en Corta la fruta, más frutas por el medio, huecos sin fruta, y frutas escondidas tras la puntuación
+
+Petición: "Y en el juego de cortar la fruta haz que las frutas salgan
+mas por en medio porque siempre estan por los laterales, tambien hay
+a veces que hay segundos donde no se lanza ninguna fruta arregla eso,
+y en la parte done esta la foto la puntuacion a veces no se ven las
+frutas, haz que no salgan frutas ahi."
+
+**Más por el medio, menos por los laterales** (`fruitslice.js`,
+`rollLaunch()`): el reparto bottom/izquierda/derecha pasa de 60/20/20 a
+80/10/10. Además, la posición horizontal de los lanzamientos desde
+abajo ya no es uniforme entre los dos márgenes: ahora es la media de
+dos tiradas aleatorias (distribución triangular, centrada), así que
+salen muchas más veces cerca del centro y cada vez menos según se
+acerca a los bordes, en vez de repartirse por igual en todo el ancho.
+
+**Causa real de los "huecos sin fruta" — no era el ritmo de
+lanzamiento** (comprobado con un log temporal: el hueco máximo entre
+lanzamientos consecutivos es de ~1.1s, exactamente el `spawnInterval`,
+nunca "segundos" de verdad). El problema real era que las frutas
+lanzadas desde los laterales (izquierda/derecha) reutilizaban la misma
+fórmula de altura de pico que las que salen desde abajo — una fórmula
+pensada para una fruta que empieza A RAS DEL SUELO (`spawnY = H`) y
+tiene que volver a bajar hasta ahí. Al aplicarla tal cual a una fruta
+que ya nace a media pantalla (`spawnY` entre 0.45H y 0.9H), el pico
+real podía quedar por ENCIMA del borde superior de la pantalla
+(coordenada Y negativa) — invisible durante ese tramo del vuelo, ya
+que `fruitContainer` recorta (`clip: true`) todo lo que queda fuera.
+La fruta seguía "viva" en el modelo (no se contaba como fallada, eso
+solo pasa al salir por abajo o muy a los lados — ver `Fruit.qml`), pero
+no se veía nada en pantalla durante ese rato: eso es lo que se
+percibía como "no sale ninguna fruta".
+
+**Arreglo**: la altura de pico de cada lanzamiento ahora se calcula en
+relación a su PROPIO punto de salida (`Math.min(spawnY, H) * (0.55 +
+random*0.4)`) en vez de siempre respecto a `H`. Para un lanzamiento
+desde abajo (`spawnY = H + fruitH`) da exactamente el mismo resultado
+de antes (`min(spawnY, H) = H`), sin cambios. Para los laterales, el
+pico máximo alcanzable queda siempre por debajo del propio punto de
+partida — nunca se sale de la pantalla por arriba.
+
+**Frutas escondidas tras la puntuación** (marcador "X/32" en la
+esquina superior derecha, con `z: 1000` — por delante del contenedor
+de frutas): se reserva una caja en esa esquina (últimos 24% del ancho,
+primeros 26% del alto — bastante más grande que el propio marcador,
+para tener margen de sobra) donde ninguna fruta puede tener su punto
+más alto. Cada lanzamiento se calcula normalmente y, si su pico
+calculado cae dentro de esa caja, se descarta y se vuelve a tirar
+(hasta 6 intentos, por si la mala suerte se repite varias veces
+seguidas — en la práctica casi siempre entra a la primera o segunda).
+No se ha tocado el propio marcador (`Score` en `FruitSlice.qml`), solo
+se evita que las frutas pasen por detrás.
+
+**Verificado** con un log temporal (`console.log` en `spawnFruit()`,
+retirado después de comprobar) durante ~45s de juego real: ritmo de
+aparición regular (~1.1s entre lanzamientos, sin huecos), posición
+media de los lanzamientos desde abajo cerca del centro de la pantalla,
+y ningún pico cayendo dentro de la zona reservada para la puntuación
+(algunos lanzamientos necesitaron un segundo intento para esquivarla,
+como se esperaba). Recompilado limpio sin el log, `--launch fruitslice`
+sin errores de QML/JS.
+
+## Fase 32: Corta la fruta con salida continua y aun mas centrada
+
+Petición: "Las frutas tardan mucho en salir que todo el rato vayan
+saliendo, y que salgan mas en medio no por los lados arregla eso."
+
+**`fruitslice.js`**:
+- `spawnInterval` baja de 1100ms a 700ms en ambos niveles — salen
+  frutas nuevas bastante más seguido, sin tocar la velocidad/lentitud
+  de cada fruta individual (eso lo sigue controlando `speedFactor`,
+  Fase 29). El objetivo de 32 frutas por nivel no cambia.
+- Reparto abajo/izquierda/derecha en `rollLaunch()`: de 80/10/10 a
+  90/5/5.
+- El centrado de los lanzamientos desde abajo pasa de la media de 2
+  tiradas aleatorias a la media de 3 (distribución más apretada
+  alrededor del centro, con las posiciones extremas cerca de los
+  bordes todavía más raras).
+
+**Verificado** con un log temporal (retirado después): ritmo de
+aparición de ~700ms de forma constante durante 20s reales de juego, y
+en una muestra de 33 lanzamientos casi todos entre el 30% y el 70% del
+ancho de la pantalla, con solo 2 laterales (~6%, acorde al 10%
+esperado con esa muestra tan pequeña). Recompilado limpio, `--launch
+fruitslice` sin errores de QML/JS.
+
+## Fase 33: aviso de "ya ni salen frutas" (proceso obsoleto) y aun mas centradas
+
+**Aviso "YA NI SALEN FRUTAS"**: tras la Fase 32, el usuario reportó que
+no salía ninguna fruta. Comprobado exhaustivamente con `--launch
+fruitslice` durante más de un minuto seguido (122 frutas en 65s, sin
+errores) — el código funcionaba bien. Causa real: el usuario tenía el
+juego abierto (acceso directo "GCompris DEV", que apunta a
+`build/bin/GCompris.exe`) mientras yo recompilaba varias veces seguidas
+por detrás (Fases 29-32) — una sesión ya abierta no recoge código
+nuevo solo por sobrescribir el `.rcc` en disco, y además sobrescribirlo
+mientras el proceso lo tiene abierto puede dejar ese recurso en un
+estado corrupto para esa sesión concreta. **Solución**: cerrar el juego
+del todo (no solo minimizarlo) y volver a abrir el acceso directo tras
+cualquier recompilación — confirmado por el usuario que al reabrirlo
+ya volvían a salir frutas. **Lección para el futuro**: si el usuario
+va a estar probando en vivo mientras se hacen cambios, avisar de que
+hay que cerrar y reabrir el juego después de cada recompilación, no
+solo la primera vez.
+
+**Aun mas centradas** (`fruitslice.js`, `rollLaunch()`): aunque ya
+salían un 90% desde abajo, el usuario seguía viendo "muchas por el
+lateral" — pedía expresamente que salieran "de en medio por debajo".
+El reparto bottom/lateral sube de 90/10 a 95/5 (2.5% cada lado), y
+sobre todo, los lanzamientos desde abajo ya no se reparten en todo el
+ancho de la pantalla (con sesgo hacia el centro) sino dentro de una
+banda central de solo el 60% del ancho (30% a cada lado del centro),
+con la posición dentro de esa banda calculada como la media de 5
+tiradas aleatorias en vez de 3 (mucho más concentrada en el propio
+centro de la banda). Es decir, ahora la inmensa mayoría de frutas
+salen muy cerca del centro horizontal de la pantalla.
+
+**Verificado** con un log temporal (retirado después): de 45
+lanzamientos en ~25s, solo 2 fueron laterales (~4%, acorde al 5%
+esperado) y el resto quedó entre el 36% y el 68% del ancho, la mayoría
+entre 40-60% (justo el centro). Recompilado limpio, `--launch
+fruitslice` sin errores de QML/JS.
+
+## Fase 34: encontrado el motivo real — el marcador ocupaba casi toda la pantalla
+
+El usuario mandó una foto real (no recortada) mostrando el marcador
+"0/32" como una barra vertical enorme, casi de borde a borde de la
+pantalla, y preguntó si podían estar saliendo frutas fuera de la
+pantalla que él no veía pero yo sí pudiera detectar.
+
+**Causa encontrada** (`FruitSlice.qml`): el propio componente
+`Score.qml` (compartido, `src/core/Score.qml`) fija por dentro
+`anchors.bottom: parent.bottom` (su posición por defecto es abajo a la
+derecha). "Corta la fruta" lo reposiciona arriba a la derecha
+añadiendo `anchors.top: parent.top` desde fuera — pero sin anular ese
+`bottom` interno. En QML ambos anclajes (`top` Y `bottom`) quedan
+activos a la vez, así que el rectángulo se estira para ocupar toda la
+altura disponible en vez de usar su `height` calculado a partir del
+texto. Confirmado con un log temporal: antes del arreglo,
+`score.height` era 1061px (toda la pantalla); la convención del propio
+GCompris para reposicionar `Score` (vista en `algorithm`,
+`adjacent_numbers`, etc.) es siempre anular el anclaje contrario
+(`anchors.bottom: undefined`), algo que faltaba aquí.
+
+**No era un problema de las frutas** — comprobado con el mismo log que
+el ritmo de aparición seguía siendo el correcto (700ms, Fase 32/33) y
+la lógica de reparto centrado también. Ninguna de las demás
+actividades propias (`aplastatopos`, `atrapamanzanas`, `diana`, etc.)
+usa el componente `Score` compartido, así que el fallo era exclusivo
+de `fruitslice`.
+
+**Arreglo**: añadida la línea que faltaba en `FruitSlice.qml`:
+```
+Score {
+    id: score
+    anchors {
+        top: parent.top
+        right: parent.right
+        bottom: undefined
+        margins: GCStyle.baseMargins
+    }
+}
+```
+**Verificado** con un log temporal (retirado después): `score.width`
+pasa a 154px y `score.height` a ~100px (antes 1061px), un marcador
+normal en la esquina en vez de una franja de pantalla entera.
+Recompilado limpio, `--launch fruitslice` sin errores de QML/JS.
+
+## Fase 35: mas cantidad de frutas, y verificacion exhaustiva del centrado
+
+El usuario insistió en que solo salían frutas por los lados y ninguna
+por el medio, incluso después de la Fase 33/34. Petición añadida:
+"que salgan muchas mas frutas".
+
+**Más cantidad** (`fruitslice.js`): `spawnInterval` baja de 700ms a
+450ms y `doubleChance` sube de 0.35 a 0.5 en ambos niveles — bastantes
+más frutas a la vez en pantalla. Reparto abajo/lateral: de 95/5 a
+98/2 (1% cada lado).
+
+**Verificación exhaustiva del centrado**: con un log temporal que
+registraba, en cada lanzamiento real, el ancho/alto exactos de la zona
+de juego, el tipo (abajo/izquierda/derecha) y la fracción horizontal
+de la posición, sobre 90 lanzamientos reales de 30s de juego:
+`W=1920 H=1061` (resolución real detectada), 88/90 (97.8%) desde
+abajo, 2/90 desde el lateral izquierdo, 0 desde la derecha —
+prácticamente igual al 98/1/1 configurado. La fracción horizontal fue
+de media 0.489 (0=borde izquierdo, 1=borde derecho, 0.5=centro exacto),
+con un rango de 0.XX a 0.73 — ninguna cerca de los bordes reales. **No
+se ha encontrado ningún fallo en el código**: el reparto centrado
+funciona exactamente como está programado.
+
+**Comprobaciones adicionales para descartar causas externas**: sin
+ningún proceso `GCompris.exe` colgado en segundo plano; el acceso
+directo "GCompris DEV" del escritorio sigue apuntando correctamente a
+`build/bin/GCompris.exe` (confirmado con PowerShell,
+`CreateShortcut().TargetPath`); se ha localizado además una instalación
+completamente distinta y mucho más antigua (9 de marzo de 2026, previa
+a todo este proyecto) en `C:\Program Files\GCompris-Qt\bin\GCompris.exe`
+con accesos directos propios en el menú Inicio ("GCompris Educational
+Software") — esa versión NI SIQUIERA tiene la actividad `fruitslice`
+(`--list-activities` no la lista), así que no puede ser la causa de
+lo que ve el usuario (si fuera esa, no vería "Corta la fruta" en el
+menú filtrado en absoluto), pero queda anotado por si en el futuro hay
+confusión de accesos directos: **hay dos "GCompris" instalados en este
+PC, uno de fábrica en Program Files y el nuestro en el escritorio como
+"GCompris DEV" — usar siempre el segundo**.
+
+**Pendiente de confirmar por el usuario**: si tras cerrar del todo y
+reabrir sigue viendo solo lanzamientos laterales pese a esta
+verificación, el problema no está en este código tal y como está
+programado — haría falta ver una captura/vídeo nuevo tras la
+recompilación de esta fase para seguir investigando.
+
+**Verificado** con `--launch fruitslice`, sin errores de QML/JS.
+
+## Fase 36: encontrado el bug real — las frutas de abajo se autodestruían antes de hacerse visibles
+
+El usuario contó, cronómetro en mano, solo 2 frutas en 1 minuto entero,
+las dos por el lateral izquierdo — cero por el centro/abajo pese a que
+el 98% de los lanzamientos son "desde abajo" (Fase 35). Pidió arreglarlo
+de raíz si hacía falta.
+
+**El bug** (`Fruit.qml`): una fruta lanzada "desde abajo" nace a
+propósito por DEBAJO del borde inferior de la pantalla
+(`spawnY = H + fruitH`) y luego sube en arco hasta entrar en la zona
+visible — tarda entre 3 y 6 fotogramas (unos 90-170ms) en conseguirlo,
+calculado y confirmado con un log temporal. Pero el `Timer` que mueve
+cada fruta comprobaba en CADA fotograma, desde el primerísimo, "¿su Y
+ya pasó el borde de abajo?" (`fruit.y > fruit.parent.height`) para
+decidir si contaba como "fallada" y destruirla — sin distinguir entre
+"todavía no ha entrado en pantalla" (normal, recién nacida) y
+"ya estuvo visible y ahora ha vuelto a caer por abajo" (un fallo de
+verdad). Como al nacer su Y siempre empieza por encima de ese límite,
+la condición se cumplía en el primerísimo fotograma (30ms después de
+crearse) y la fruta se autodestruía ahí mismo — **sin haberse hecho
+visible ni una sola vez**. Las frutas de los laterales no tenían este
+problema porque nacen ya dentro de la pantalla, por eso eran las
+únicas que se veían.
+
+Es un fallo que llevaba ahí desde que se creó esta actividad (Fase 7),
+no algo introducido en las últimas fases — solo se ha hecho evidente
+ahora porque el reparto centrado (Fase 32-35) subió el porcentaje de
+lanzamientos "desde abajo" del original 60% al 98%, dejando cada vez
+menos margen de frutas laterales "de refresco" para disimular que las
+demás nunca se veían.
+
+**Arreglo**: se añade `hasBeenVisible` (booleano, empieza en `false`).
+Cada fotograma, si la fruta todavía no lo tenía a `true` y su Y ya está
+dentro de la pantalla, se marca a `true`. La condición de "fallada por
+abajo" ahora exige `hasBeenVisible === true` además de `y > altura` —
+es decir, solo cuenta como fallo si ya estuvo visible y ha vuelto a
+salir por abajo, nunca en su primer instante de vida.
+
+De paso, también se ha cambiado cómo se mide el tiempo de vuelo
+(`elapsed`): antes se sumaba un incremento fijo de 30ms en cada tic del
+`Timer`, asumiendo que el `Timer` siempre dispara exactamente cada
+30ms; ahora se calcula con la hora real del sistema
+(`(Date.now() - spawnTimeMs) / 1000`), más robusto si el `Timer` se
+retrasa por carga del sistema (el PC del túnel táctil/proyector puede
+ser más justo de recursos que este PC de desarrollo).
+
+**Verificado** con un log temporal (retirado después) durante 20s de
+juego real: 55 frutas se hicieron visibles correctamente (tardando de
+media ~0.09-0.17s en subir a pantalla, tal y como se esperaba por
+cálculo), 0 se destruyeron sin haberse visto nunca, 43 fallos normales
+tras haber estado visibles. Recompilado limpio, `--launch fruitslice`
+sin errores de QML/JS.
+
+## Fase 37: ritmo mas pausado (~1 fruta/segundo) y trazadas diagonales, no verticales
+
+Ya con las frutas visibles (Fase 36), el usuario pidió: "haz que las
+trazadas no sean verticales, y disminuye el tiempo por fruta haz que
+cada segundo mas o menos alga una fruta luego otra luego a lo mejor
+dos, que sea aleatorio, pero importante que la trazada no sea
+vertical".
+
+**Ritmo** (`fruitslice.js`, `levelProperty`): `spawnInterval` pasa de
+450ms a 1000ms y `doubleChance` de 0.5 a 0.3 en ambos niveles — más o
+menos una fruta por segundo, con dobles ocasionales (~30% de las
+veces), tal y como se pidió.
+
+**Trazadas diagonales, no verticales** (`rollLaunch()`): antes, la
+deriva lateral de las frutas que salen desde abajo era pequeña
+(`maxDrift = W * 0.15`) y podía salir casi 0 por pura suerte del
+número aleatorio (`(Math.random()*2-1)`), dando arcos casi
+verticales. Ahora se elige primero una dirección al azar
+(izquierda/derecha) y luego una magnitud siempre sustancial (entre el
+20% y el 45% del ancho de la pantalla a lo largo de todo el vuelo) —
+nunca cerca de cero, así que el arco siempre se nota claramente
+inclinado hacia un lado.
+
+**Verificado** con un log temporal (retirado después) durante ~26s
+reales: ritmo de aparición de ~1000ms con dobles ocasionales (36
+lanzamientos, acorde a lo esperado con 30% de dobles), y la deriva
+lateral de cada lanzamiento entre el 22% y el 44% del ancho de
+pantalla (nunca próxima a 0). Recompilado limpio, `--launch
+fruitslice` sin errores de QML/JS.
+
+## Fase 38: ritmo aleatorio 1.5-2s, dobles que cruzan (no la misma trazada), y laterales mas frecuentes y diagonales
+
+Petición: "pon 1,5s 2s, cuando salgan dos a la vez que no salgan
+juntas y que no tengan la misma trazada, tambien añade que alguna que
+otra salga por el lateral cruzando por el medio de la pantalla, una
+trazada de unos 60 grados mas o menos".
+
+**Ritmo aleatorio** (`fruitslice.js`): en vez de un `spawnInterval`
+fijo por nivel, cada vez que se lanza una fruta se sortea el intervalo
+para la siguiente, entre 1500 y 2000ms (`SPAWN_INTERVAL_MIN/MAX`).
+
+**Los dobles ya no repiten trazada**: `spawnTick()` ahora encadena las
+dos llamadas — la primera elige lado libremente y el resultado real
+(`side`, -1 izquierda / +1 derecha) se guarda; si toca doble, la
+segunda se fuerza al lado contrario (`sideHint`). En `rollLaunch()`,
+tanto la banda central (para las que salen de abajo) como el lado
+elegido para los laterales respetan ese `sideHint`, y la deriva
+lateral de las que salen de abajo siempre cruza hacia el lado
+contrario de donde nacieron — dos frutas simultáneas nacen en mitades
+opuestas de la pantalla y se cruzan en el aire en vez de dibujar el
+mismo arco por duplicado.
+
+**Laterales más frecuentes y con cruce de ~60°**: el reparto
+abajo/lateral pasa de 98/2 a 88/12 (6% cada lado), y la velocidad
+horizontal de los laterales sube de `W*(0.07-0.13)` a `W*(0.28-0.42)`
+(multiplicada por `speedFactor` igual que antes) — ahora comparable a
+la velocidad vertical de lanzamiento, así que se ve un cruce diagonal
+claro por el centro de la pantalla en vez de una deriva horizontal
+lenta.
+
+**Verificado** con un log temporal (retirado después) durante 40s
+reales: 26 lanzamientos, intervalos entre lanzamientos siempre dentro
+de 1500-2000ms, la mayoría de los dobles con lados opuestos
+confirmados en el log, sin errores de QML/JS tras recompilar limpio
+con `--launch fruitslice`.
+
+## Fase 39: subir un poco mas la altura minima de las frutas de abajo
+
+Petición: "casi perfecto solo que hay algunas que salen por en medio
+con muy poco fuerza hacia arriba, haz que suban un poco mas y esta
+perfecto".
+
+**`fruitslice.js`**: el factor de altura de pico (`peakHeight`, relativo
+al propio punto de salida de cada fruta desde la Fase 31) tenía un
+rango de 0.55 a 0.95 — las que caían en la parte baja de ese rango
+subían poco. Sube a 0.72-0.97: el mínimo posible ahora es bastante más
+alto, el máximo apenas cambia. Recompilado, `--launch fruitslice` sin
+errores de QML/JS.
+
+## Fase 40: menos dobles en Corta la fruta
+
+Petición: "que no salgan tantos frutas dobles a la vez... y ya estaria
+perfecto".
+
+**`fruitslice.js`**: `doubleChance` baja de 0.3 a 0.12 en ambos
+niveles (de un 30% de las veces a solo un 12%). Recompilado, `--launch
+fruitslice` sin errores de QML/JS.
+
+## Fase 41: un poco menos de centro, un poco mas de laterales en Corta la fruta
+
+Petición: "baja un poco la probabilidad de que salga por en medio y
+sube un poco las laterales, y ya estaria".
+
+**`fruitslice.js`** (`rollLaunch()`): reparto abajo/lateral pasa de
+88/12 (Fase 38) a 78/22 (11% cada lado en vez de 6%). Recompilado,
+`--launch fruitslice` sin errores de QML/JS.

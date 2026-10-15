@@ -2,7 +2,9 @@
  *
  * Elderly-friendly build: new activity, not part of upstream GCompris.
  * A single fruit flying in a parabolic arc; position is computed from
- * elapsed time (not accumulated per-frame) so it never drifts.
+ * real elapsed wall-clock time (not a fixed per-tick increment), so it
+ * stays correct even if the Timer below doesn't fire at exactly its
+ * nominal interval — e.g. under load on a slower machine.
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -24,6 +26,13 @@ Item {
 
     property real elapsed: 0
     property bool isSliced: false
+    property real spawnTimeMs: Date.now()
+    // A bottom-launched fruit starts below the bottom edge on purpose (it
+    // then arcs up into view) — it must have actually been on-screen at
+    // least once before "y past the bottom edge" counts as a miss, or it
+    // gets destroyed the instant it's created, before ever becoming
+    // visible.
+    property bool hasBeenVisible: false
 
     signal missed(var fruit)
 
@@ -83,9 +92,12 @@ Item {
         running: !fruit.isSliced
         repeat: true
         onTriggered: {
-            fruit.elapsed += interval / 1000
-            // fell off the bottom, or flew way off either side (side-launched fruit)
-            if (fruit.y > fruit.parent.height ||
+            fruit.elapsed = (Date.now() - fruit.spawnTimeMs) / 1000
+            if (!fruit.hasBeenVisible && fruit.y <= fruit.parent.height)
+                fruit.hasBeenVisible = true
+            // fell back off the bottom after being visible, or flew way off
+            // either side (side-launched fruit)
+            if ((fruit.hasBeenVisible && fruit.y > fruit.parent.height) ||
                 fruit.x < -fruit.parent.width || fruit.x > fruit.parent.width * 2) {
                 fruit.missed(fruit)
                 fruit.destroy()

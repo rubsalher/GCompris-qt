@@ -25,7 +25,7 @@ ActivityInfo {
   //: Help prerequisite
   prerequisite: qsTr("Una pelota pequeña y blanda para tirar a la pantalla.")
   //: Help manual
-  manual: qsTr("Tira la pelota de verdad contra la pantalla, apuntando a la diana. Cuanto más cerca del centro caiga, más puntos consigues — mira los números y los colores de cada franja. Cada turno son 3 tiros, y después de cada uno hay que esperar 5 segundos antes de poder tirar otra vez (el tiempo de ir a buscar la pelota). A la derecha se ven los puntos del turno y qué tiro te toca. Cuando termines los 3 tiros, toca \"Nuevo turno\" para volver a empezar.")
+  manual: qsTr("Tira la pelota de verdad contra la pantalla, apuntando a la diana. Cuanto más cerca del centro caiga, más puntos consigues — mira los números y los colores de cada franja. Cada turno son 6 tiros, y después de cada uno hay que esperar 3 segundos antes de poder tirar otra vez (el tiempo de ir a buscar la pelota). A la derecha se ven los puntos del turno y qué tiro te toca. Cuando termines los 6 tiros, toca \"Nuevo turno\" para volver a empezar.")
   credit: qsTr("Actividad nueva, creada para esta adaptación.")
   section: "fun"
   createdInVersion: 0

@@ -156,6 +156,7 @@ ActivityBase {
             anchors {
                 top: parent.top
                 right: parent.right
+                bottom: undefined
                 margins: GCStyle.baseMargins
             }
         }
